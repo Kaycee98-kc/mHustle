@@ -1,6 +1,5 @@
 -- Scenario test for the follow-up rules. Run against a scratch Postgres 15+:
 --   psql -f tests/auth_stub.sql -f migrations/0001_schema.sql -f migrations/0002_sync_and_schedules.sql
---   psql -c "grant usage on schema public to authenticated; grant select,insert,update on all tables in schema public to authenticated; revoke insert, delete on follow_up_tasks from authenticated;"
 --   psql -f tests/rules_test.sql
 \set ON_ERROR_STOP 1
 set role authenticated;

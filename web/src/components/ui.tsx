@@ -53,11 +53,12 @@ export function Segmented<T extends string>({ options, value, onChange, label }:
   options: { value: T; label: string; count?: number }[]; value: T; onChange: (v: T) => void; label: string
 }) {
   return (
-    <div className="segmented" role="radiogroup" aria-label={label}>
+    <div className={`segmented cols-${options.length}`} role="radiogroup" aria-label={label}>
       {options.map((o) => (
         <button key={o.value} type="button" role="radio" aria-checked={value === o.value}
           className={value === o.value ? 'active' : ''} onClick={() => onChange(o.value)}>
-          {o.label}{o.count !== undefined && <span className="count">{o.count}</span>}
+          <span className="seg-label">{o.label}</span>
+          {o.count !== undefined && <span className="count">{o.count}</span>}
         </button>
       ))}
     </div>

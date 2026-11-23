@@ -200,11 +200,18 @@ begin
   end loop;
 end $$;
 
--- Follow-up tasks are created by triggers only; the app may only tick them.
-revoke insert, delete on public.follow_up_tasks from anon, authenticated;
-revoke insert, update, delete on public.reminder_items from anon, authenticated;
+-- Explicit privileges (works whether or not "Grant API access to new tables
+-- automatically" was ticked when the Supabase project was created).
 revoke all on public.clients, public.feedback, public.follow_up_tasks, public.hustle_tasks,
-  public.weekly_reports, public.reminder_items, public.push_subscriptions, public.settings from anon;
+  public.weekly_reports, public.reminder_items, public.push_subscriptions, public.settings
+  from anon, authenticated;
+grant usage on schema public to authenticated, service_role;
+grant select, insert, update on public.clients, public.feedback, public.hustle_tasks, public.settings to authenticated;
+grant select, update on public.follow_up_tasks to authenticated;   -- created by triggers only; app may only tick them
+grant select on public.weekly_reports, public.reminder_items to authenticated;  -- written by Edge Functions
+grant select, insert, update, delete on public.push_subscriptions to authenticated;
+grant all on public.settings, public.clients, public.feedback, public.follow_up_tasks, public.hustle_tasks,
+  public.weekly_reports, public.reminder_items, public.push_subscriptions to service_role;
 
 -- =====================================================================
 -- Helpers
@@ -557,5 +564,6 @@ begin
   update public.settings set sync_token_hash = encode(digest(p_token, 'sha256'), 'hex')
   where owner_id = auth.uid();
 end $$;
-revoke execute on function public.mh_set_sync_token(text) from anon;
+revoke execute on function public.mh_set_sync_token(text) from public, anon;
+grant execute on function public.mh_set_sync_token(text) to authenticated;
 

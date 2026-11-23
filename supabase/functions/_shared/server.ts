@@ -44,11 +44,12 @@ export async function sha256Hex(s: string): Promise<string> {
 }
 
 // ---------------------------------------------------------------- reports
-async function loadReportData(db: SupabaseClient, owner: string) {
+async function loadReportData(db: SupabaseClient, _owner: string) {
   const [c, f, t] = await Promise.all([
-    db.from("clients").select("id,name,company,course,partner,remarks,schedule_type,appointment_date,appointment_time").eq("owner_id", owner),
-    db.from("feedback").select("id,client_id,content,created_at").eq("owner_id", owner),
-    db.from("follow_up_tasks").select("client_id,title,task_type,priority,due_at,completed,completed_at,cancelled").eq("owner_id", owner),
+    // shared workspace: reports cover everyone's records
+    db.from("clients").select("id,name,company,course,partner,remarks,schedule_type,appointment_date,appointment_time"),
+    db.from("feedback").select("id,client_id,content,created_at"),
+    db.from("follow_up_tasks").select("client_id,title,task_type,priority,due_at,completed,completed_at,cancelled"),
   ]);
   const err = c.error ?? f.error ?? t.error;
   if (err) throw new Error(err.message);
@@ -89,7 +90,7 @@ export async function createReport(
 ) {
   if (type === "automatic") {
     const { data: existing } = await db.from("weekly_reports").select("id")
-      .eq("owner_id", owner).eq("period_start", periodStart).eq("generation_type", "automatic").maybeSingle();
+      .eq("period_start", periodStart).eq("generation_type", "automatic").maybeSingle();
     if (existing) return { skipped: true, id: existing.id };
   }
   const data = await loadReportData(db, owner);
@@ -108,7 +109,7 @@ export async function createReport(
 
   for (let attempt = 0; attempt < 3; attempt++) {
     const { data: last } = await db.from("weekly_reports").select("version")
-      .eq("owner_id", owner).eq("period_start", periodStart).order("version", { ascending: false }).limit(1).maybeSingle();
+      .eq("period_start", periodStart).order("version", { ascending: false }).limit(1).maybeSingle();
     const version = (last?.version ?? 0) + 1;
     const { data: row, error } = await db.from("weekly_reports").insert({
       owner_id: owner, period_start: periodStart, period_end: periodEnd, generation_type: type,

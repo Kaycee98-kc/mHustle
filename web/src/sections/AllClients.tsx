@@ -224,7 +224,7 @@ function ClientCard({ c, open, checked, onCheck, feedbackCount, onToggle, onEdit
             </ul>
           ) : <p className="muted small">No feedback recorded.</p>}
 
-          <div className="form-actions">
+          <div className="client-actions">
             <button type="button" className="btn btn-danger" onClick={remove} disabled={busy}><Trash2 size={16} aria-hidden /> Delete</button>
             <button type="button" className="btn btn-ghost" onClick={onEdit}><Pencil size={16} aria-hidden /> Edit Client</button>
             <button type="button" className="btn btn-primary" onClick={onAddFeedback}><MessageSquarePlus size={16} aria-hidden /> Add Feedback</button>

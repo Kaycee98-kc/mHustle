@@ -5,12 +5,14 @@ import { useData } from '../lib/store'
 import { friendlyError, supabase } from '../lib/supabase'
 import { currentSubscription, disablePush, enablePush, pushSupport } from '../lib/push'
 import { hhmm } from '../lib/hooks'
+import { getThemeChoice, setThemeChoice, type ThemeChoice } from '../lib/theme'
 
 export default function SettingsSheet({ onClose, email }: { onClose: () => void; email: string }) {
   const { settings, refresh, partners } = useData()
   const [np, setNp] = useState({ name: '', role: 'Partner' as 'Partner' | 'Consultant', phone: '', email: '' })
   const toast = useToast()
   const [pushOn, setPushOn] = useState(false)
+  const [theme, setTheme] = useState<ThemeChoice>(getThemeChoice())
   const [busy, setBusy] = useState(false)
   const [token, setToken] = useState<string | null>(null)
   const [form, setForm] = useState({
@@ -100,6 +102,17 @@ export default function SettingsSheet({ onClose, email }: { onClose: () => void;
         </div>
 
         <section>
+          <h3>Appearance</h3>
+          <div className="type-buttons" role="radiogroup" aria-label="Theme" style={{ width: '100%' }}>
+            {([['dark', 'Dark'], ['light', 'Light'], ['system', 'Match device']] as const).map(([v, l]) => (
+              <button key={v} type="button" role="radio" aria-checked={theme === v} className={theme === v ? 'active' : ''}
+                onClick={() => { setTheme(v); setThemeChoice(v) }}>{l}</button>
+            ))}
+          </div>
+          <p className="hint">Saved on this device only.</p>
+        </section>
+
+        <section>
           <h3>Notifications on this device</h3>
           {support.ok ? (
             <button type="button" className={`btn ${pushOn ? 'btn-ghost' : 'btn-primary'}`} onClick={togglePush} disabled={busy}>
@@ -184,8 +197,9 @@ export default function SettingsSheet({ onClose, email }: { onClose: () => void;
         </section>
 
         <section>
-          <h3>Account</h3>
+          <h3>Account &amp; sharing</h3>
           <p className="hint">Signed in as {email}</p>
+          <p className="hint">mHustle is shared: everyone with a login sees and edits the same clients, feedback, follow-ups, Hustle Tasks, partners and reports. Notifications and the calendar/sync link are personal to each person. To give a colleague access, create their login in Supabase → Authentication → Users → Add user.</p>
           <button type="button" className="btn btn-ghost" onClick={() => supabase.auth.signOut()}><LogOut size={16} /> Sign out</button>
         </section>
       </div>

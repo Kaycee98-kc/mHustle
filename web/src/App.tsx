@@ -7,6 +7,7 @@ import { ToastProvider } from './components/ui'
 import { DataProvider, bucket, useData } from './lib/store'
 import { supabase } from './lib/supabase'
 import type { Section } from './lib/types'
+import { sgtDate, shortDate } from '@shared/time.ts'
 import NewClient from './sections/NewClient'
 import AllClients from './sections/AllClients'
 import Feedback from './sections/Feedback'
@@ -98,13 +99,14 @@ function Shell({ email }: { email: string }) {
     return () => { document.removeEventListener('focusin', onIn); document.removeEventListener('focusout', onOut) }
   }, [])
 
+  const todayLabel = shortDate(sgtDate(new Date(now)))
   const clearFeedbackFor = useCallback(() => setFeedbackFor(null), [])
   const title = section === 'new' && editingId ? 'Edit Client' : NAV.find((n) => n.id === section)!.label
 
   return (
     <div className="app">
       <header className="header">
-        <h1 className="brand">mHustle</h1>
+        <h1 className="brand"><span className="brand-m">m</span>Hustle</h1>
         <button type="button" className="icon-btn header-gear" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
           <Gear size={20} aria-hidden />
         </button>
@@ -123,7 +125,10 @@ function Shell({ email }: { email: string }) {
       </nav>
 
       <main className="main">
-        <h2 className="page-title">{title}</h2>
+        <div className="page-head">
+          <h2 className="page-title">{title}</h2>
+          <div className="page-sub">{todayLabel} · Asia/Singapore</div>
+        </div>
         {/* Sections stay mounted so unsaved form input is preserved while navigating */}
         <div hidden={section !== 'new'}>
           <NewClient editingId={editingId} onEditDone={(id) => { setEditingId(null); if (id) { setExpandedId(id); go('clients') } }} />

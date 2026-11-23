@@ -18,3 +18,4 @@ $$;
 
 revoke execute on function public.mh_pending_reminders(uuid) from public, anon, authenticated;
 revoke execute on function public.mh_ack_unsynced_cancelled(uuid) from public, anon, authenticated;
+grant execute on function public.mh_pending_reminders(uuid), public.mh_ack_unsynced_cancelled(uuid) to service_role;

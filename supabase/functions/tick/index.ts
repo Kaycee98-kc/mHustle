@@ -27,22 +27,29 @@ Deno.serve(async (req) => {
   const summary = { sent: 0, tasks: 0, removedSubscriptions: 0, reports: 0, errors: [] as string[] };
 
   // ---------------------------------------------------------------- push
+  // Shared workspace: every signed-in device gets every follow-up reminder,
+  // except during that person's quiet hours.
   if (VAPID_PUBLIC && VAPID_PRIVATE) {
     const { data: settings } = await db.from("settings").select("*");
-    for (const s of settings ?? []) {
-      if (inQuietHours(now, s.quiet_start, s.quiet_end)) continue;
-      const { data: subs } = await db.from("push_subscriptions").select("*").eq("owner_id", s.owner_id);
-      if (!subs?.length) continue;
+    const byOwner = new Map((settings ?? []).map((s) => [s.owner_id, s]));
+    const first = settings?.[0];
+    const { data: allSubs } = await db.from("push_subscriptions").select("*");
+    const subs = (allSubs ?? []).filter((sub) => {
+      const st = byOwner.get(sub.owner_id) ?? first;
+      return !st || !inQuietHours(now, st.quiet_start, st.quiet_end);
+    });
+    if (subs.length) {
       const { data: tasks } = await db.from("follow_up_tasks")
-        .select("id,client_id,task_type,title,priority,due_at,remind_at,last_notified_at,notify_count,notification_status")
-        .eq("owner_id", s.owner_id).eq("completed", false).eq("cancelled", false).lte("remind_at", now.toISOString());
+        .select("id,owner_id,client_id,task_type,title,priority,due_at,remind_at,last_notified_at,notify_count,notification_status")
+        .eq("completed", false).eq("cancelled", false).lte("remind_at", now.toISOString());
 
       for (const t of tasks ?? []) {
+        const s = byOwner.get(t.owner_id) ?? first;
         let due = false;
         if (t.task_type === "next_monday") {
           due = t.notification_status === "pending"; // exactly once
         } else {
-          const every = (t.task_type === "appointment_feedback" ? s.urgent_repeat_minutes : s.email_repeat_minutes) * 60_000;
+          const every = ((t.task_type === "appointment_feedback" ? s?.urgent_repeat_minutes : s?.email_repeat_minutes) ?? 240) * 60_000;
           due = !t.last_notified_at || now.getTime() - new Date(t.last_notified_at).getTime() >= every - 60_000;
         }
         if (!due) continue;

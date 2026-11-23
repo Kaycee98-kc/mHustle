@@ -18,7 +18,7 @@ export default function Login() {
 
   return (
     <div className="login">
-      <h1 className="brand">mHustle</h1>
+      <h1 className="brand"><span className="brand-m">m</span>Hustle</h1>
       {!configured ? (
         <div className="card"><p>{configError} Fix it in Vercel → Settings → Environment Variables, then redeploy.</p></div>
       ) : (
