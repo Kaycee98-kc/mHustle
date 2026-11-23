@@ -20,6 +20,7 @@ export interface Client {
   emailed: boolean
   emailed_at: string | null
   whatsapped?: boolean
+  created_by_email?: string
   whatsapped_at?: string | null
   created_at: string
   updated_at: string

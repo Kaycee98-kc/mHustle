@@ -1,6 +1,6 @@
 \set ON_ERROR_STOP 1
 -- two accounts: A (existing data) and B (colleague)
-insert into auth.users values ('22222222-2222-2222-2222-222222222222') on conflict do nothing;
+insert into auth.users values ('22222222-2222-2222-2222-222222222222','abdul.matin@hustle.com.sg') on conflict do nothing;
 \i migrations/0005_shared_workspace.sql
 set role authenticated;
 select set_config('request.jwt.claim.sub','22222222-2222-2222-2222-222222222222',false);

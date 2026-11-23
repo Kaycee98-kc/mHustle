@@ -26,3 +26,17 @@ export function waLink(contact: string): string | null {
   if (/^[689]\d{7}$/.test(d)) d = '65' + d
   return d.length >= 8 ? `https://wa.me/${d}` : null
 }
+
+/** "abdul.matin@hustle.com.sg" → "Abdul Matin" */
+export function personName(email?: string | null): string {
+  if (!email) return 'Unknown'
+  return email.split('@')[0].split(/[._-]+/).filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
+
+/** Upcoming schedule instant used for "by schedule" sorting (null for Potential). */
+export function scheduleKey(c: Client): string | null {
+  if (c.schedule_type === 'appointment' && c.appointment_date) return `${c.appointment_date}T${(c.appointment_time ?? '00:00').slice(0, 5)}`
+  if (c.schedule_type === 'lesson' && c.lesson_date_from) return `${c.lesson_date_from}T${(c.lesson_time_from ?? '00:00').slice(0, 5)}`
+  return null
+}

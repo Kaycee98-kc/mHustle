@@ -454,3 +454,16 @@ h3 .muted { text-transform: none; letter-spacing: 0; font-family: var(--font-bod
   :root[data-theme="light"] .main { max-width: 880px; padding: 24px 32px 48px; margin-left: max(220px, calc(220px + (100vw - 220px - 880px) / 2)); }
   :root[data-theme="light"] .bulk-bar { top: 58px; }
 }
+
+/* All Clients: recorded-by filter, sort, NEW badge */
+.list-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.list-controls .control { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.list-controls .control > span { font-size: .8rem; font-weight: 600; color: var(--muted); }
+.list-controls select { min-height: 42px; padding-top: 9px; padding-bottom: 9px; font-size: 15px; }
+@media (max-width: 360px) { .list-controls { grid-template-columns: 1fr; } }
+.client-added { margin-top: 6px; font-size: .78rem; color: var(--muted); }
+.new-badge {
+  display: inline-flex; align-items: center; vertical-align: middle; margin-left: 8px;
+  font-family: var(--font-body); font-size: .66rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 999px; background: var(--ok-soft); color: var(--ok);
+}

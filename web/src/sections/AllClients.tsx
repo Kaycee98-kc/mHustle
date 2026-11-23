@@ -3,10 +3,12 @@ import { ChevronDown, MailCheck, MessageCircle, MessageSquarePlus, Pencil, Searc
 import { Empty, Segmented, useToast } from '../components/ui'
 import { bucket, useData } from '../lib/store'
 import { friendlyError, supabase } from '../lib/supabase'
-import { scheduleLine, sgtDateTime, shortDate, time12, waLink } from '../lib/format'
+import { personName, scheduleKey, scheduleLine, sgtDateTime, shortDate, time12, waLink } from '../lib/format'
 import { SCHEDULE_LABEL, TASK_ACTION, type Client, type ScheduleType } from '../lib/types'
 
 type Filter = 'all' | ScheduleType
+type Sort = 'newest' | 'oldest' | 'schedule'
+const NEW_WINDOW_MS = 24 * 3600_000
 
 export default function AllClients({ expandedId, setExpandedId, onEdit, onAddFeedback, onDeleted }: {
   expandedId: string | null
@@ -19,6 +21,8 @@ export default function AllClients({ expandedId, setExpandedId, onEdit, onAddFee
   const toast = useToast()
   const [q, setQ] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
+  const [recorder, setRecorder] = useState<string>('all')
+  const [sort, setSort] = useState<Sort>('newest')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkBusy, setBulkBusy] = useState(false)
 
@@ -28,12 +32,34 @@ export default function AllClients({ expandedId, setExpandedId, onEdit, onAddFee
     return m
   }, [feedback])
 
+  const recorders = useMemo(() => {
+    const m = new Map<string, number>()
+    clients.forEach((c) => { const e = c.created_by_email || ''; m.set(e, (m.get(e) ?? 0) + 1) })
+    return [...m.entries()].sort((a, b) => personName(a[0]).localeCompare(personName(b[0])))
+  }, [clients])
+
+  const byRecorder = useMemo(
+    () => clients.filter((c) => recorder === 'all' || (c.created_by_email || '') === recorder),
+    [clients, recorder])
+
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase()
-    return clients
+    const list = byRecorder
       .filter((c) => filter === 'all' || c.schedule_type === filter)
-      .filter((c) => !needle || [c.name, c.company, c.course, c.partner, c.remarks].some((v) => v.toLowerCase().includes(needle)))
-  }, [clients, q, filter])
+      .filter((c) => !needle || [c.name, c.company, c.course, c.partner, c.remarks, personName(c.created_by_email)]
+        .some((v) => v.toLowerCase().includes(needle)))
+    const added = (c: Client) => c.created_at
+    return [...list].sort((a, b) => {
+      if (sort === 'oldest') return added(a).localeCompare(added(b))
+      if (sort === 'schedule') {
+        const ka = scheduleKey(a), kb = scheduleKey(b)
+        if (ka && kb) return ka.localeCompare(kb)
+        if (ka) return -1
+        if (kb) return 1
+      }
+      return added(b).localeCompare(added(a)) // newest first
+    })
+  }, [byRecorder, q, filter, sort])
 
   const sel = clients.filter((c) => selected.has(c.id))
   const toggleSel = (id: string) => setSelected((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n })
@@ -69,7 +95,7 @@ export default function AllClients({ expandedId, setExpandedId, onEdit, onAddFee
     } catch (e) { toast('error', friendlyError(e)) } finally { setBulkBusy(false) }
   }
 
-  const counts = (t: Filter) => (t === 'all' ? clients.length : clients.filter((c) => c.schedule_type === t).length)
+  const counts = (t: Filter) => (t === 'all' ? byRecorder.length : byRecorder.filter((c) => c.schedule_type === t).length)
 
   return (
     <div className="stack">
@@ -77,6 +103,25 @@ export default function AllClients({ expandedId, setExpandedId, onEdit, onAddFee
         <Search size={18} aria-hidden />
         <input type="search" placeholder="Search clients" value={q}
           onChange={(e) => setQ(e.target.value)} aria-label="Search clients" />
+      </div>
+      <div className="list-controls">
+        <label className="control">
+          <span>Recorded by</span>
+          <select value={recorder} onChange={(e) => setRecorder(e.target.value)} aria-label="Filter by who recorded the client">
+            <option value="all">Everyone ({clients.length})</option>
+            {recorders.map(([email, n]) => (
+              <option key={email} value={email}>{email ? personName(email) : 'Unknown'} ({n})</option>
+            ))}
+          </select>
+        </label>
+        <label className="control">
+          <span>Sort</span>
+          <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort clients">
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="schedule">Schedule date</option>
+          </select>
+        </label>
       </div>
       <Segmented<Filter> label="Filter clients" value={filter} onChange={setFilter} options={[
         { value: 'all', label: 'All', count: counts('all') },
@@ -101,7 +146,7 @@ export default function AllClients({ expandedId, setExpandedId, onEdit, onAddFee
       )}
       {loading && !clients.length ? <Empty>Loading…</Empty> : !shown.length ? <Empty>{clients.length ? 'No clients match your search.' : 'No clients yet. Add one under New Client.'}</Empty> : null}
       {shown.map((c) => (
-        <ClientCard key={c.id} c={c} open={expandedId === c.id} checked={selected.has(c.id)} onCheck={() => toggleSel(c.id)} feedbackCount={fbCount.get(c.id) ?? 0}
+        <ClientCard key={c.id} c={c} isNew={now - new Date(c.created_at).getTime() < NEW_WINDOW_MS} open={expandedId === c.id} checked={selected.has(c.id)} onCheck={() => toggleSel(c.id)} feedbackCount={fbCount.get(c.id) ?? 0}
           onToggle={() => setExpandedId(expandedId === c.id ? null : c.id)}
           onEdit={() => onEdit(c.id)} onAddFeedback={() => onAddFeedback(c.id)} onDeleted={() => onDeleted(c.id)}
           feedback={feedback.filter((f) => f.client_id === c.id)}
@@ -111,8 +156,8 @@ export default function AllClients({ expandedId, setExpandedId, onEdit, onAddFee
   )
 }
 
-function ClientCard({ c, open, checked, onCheck, feedbackCount, onToggle, onEdit, onAddFeedback, onDeleted, feedback, tasks, now }: {
-  c: Client; open: boolean; checked: boolean; onCheck: () => void; feedbackCount: number; onToggle: () => void; onEdit: () => void; onAddFeedback: () => void; onDeleted: () => void
+function ClientCard({ c, isNew, open, checked, onCheck, feedbackCount, onToggle, onEdit, onAddFeedback, onDeleted, feedback, tasks, now }: {
+  c: Client; isNew: boolean; open: boolean; checked: boolean; onCheck: () => void; feedbackCount: number; onToggle: () => void; onEdit: () => void; onAddFeedback: () => void; onDeleted: () => void
   feedback: ReturnType<typeof useData>['feedback']; tasks: ReturnType<typeof useData>['tasks']; now: number
 }) {
   const { refresh } = useData()
@@ -159,13 +204,14 @@ function ClientCard({ c, open, checked, onCheck, feedbackCount, onToggle, onEdit
       </label>
       <button type="button" className="client-head" onClick={onToggle} aria-expanded={open}>
         <div className="client-main">
-          <div className="client-name">{c.name}</div>
+          <div className="client-name">{c.name}{isNew && <span className="new-badge">New</span>}</div>
           <div className="client-sub">{[c.company, c.course].filter(Boolean).join(' · ') || '—'}</div>
           <div className="client-meta">
             <span className={`badge badge-${c.schedule_type}`}>{SCHEDULE_LABEL[c.schedule_type]}</span>
             <span className="muted">{scheduleLine(c)}</span>
             {feedbackCount > 0 && <span className="muted">· {feedbackCount} feedback</span>}
           </div>
+          <div className="client-added">Added {sgtDateTime(c.created_at)} · by {personName(c.created_by_email)}</div>
         </div>
         <ChevronDown className="chev" size={20} aria-hidden />
       </button>
@@ -187,6 +233,7 @@ function ClientCard({ c, open, checked, onCheck, feedbackCount, onToggle, onEdit
             {row('Remarks', c.remarks, true)}
             {row('Schedule Type', SCHEDULE_LABEL[c.schedule_type])}
             {c.schedule_type !== 'potential' && row(c.schedule_type === 'lesson' ? 'Lesson schedule' : 'Appointment', scheduleLine(c))}
+            {row('Recorded by', `${personName(c.created_by_email)} · ${sgtDateTime(c.created_at)}`)}
             {row('Apple Reminders list', c.schedule_type === 'potential' ? 'Follow Up' : 'Clients')}
           </dl>
 
