@@ -1,10 +1,10 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { Pencil } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
 import { AutoTextarea, Empty, Field, useToast } from '../components/ui'
 import { TIME_RE, hhmm, newId, useDraft } from '../lib/hooks'
 import { useData } from '../lib/store'
 import { friendlyError, supabase } from '../lib/supabase'
-import { shortDate, time12 } from '../lib/format'
+import { sgtDateTime, shortDate, time12 } from '../lib/format'
 import type { HustleTask } from '../lib/types'
 
 interface Form { draftId: string; remarks: string; date: string; time: string }
@@ -24,7 +24,19 @@ export default function HustleTasks() {
   }
 
   const sorted = useMemo(() => [...hustle].sort((a, b) =>
-    `${a.date ?? '9999'}${a.time ?? ''}`.localeCompare(`${b.date ?? '9999'}${b.time ?? ''}`)), [hustle])
+    Number(!!a.completed) - Number(!!b.completed) ||
+    (a.completed ? (b.completed_at ?? '').localeCompare(a.completed_at ?? '')
+      : `${a.date ?? '9999'}${a.time ?? ''}`.localeCompare(`${b.date ?? '9999'}${b.time ?? ''}`))), [hustle])
+  const openCount = hustle.filter((t) => !t.completed).length
+
+  async function toggleDone(t: HustleTask) {
+    try {
+      const { error } = await supabase.from('hustle_tasks').update({ completed: !t.completed }).eq('id', t.id)
+      if (error) throw error
+      toast('ok', t.completed ? 'Task reopened — reminders restored.' : 'Task completed — reminders stopped.')
+      await refresh()
+    } catch (err) { toast('error', friendlyError(err)) }
+  }
 
   async function submit(ev: FormEvent) {
     ev.preventDefault()
@@ -51,6 +63,18 @@ export default function HustleTasks() {
       }
       await refresh()
     } catch (err) { toast('error', friendlyError(err)) } finally { setSaving(false) }
+  }
+
+  async function remove(t: HustleTask) {
+    const first = t.remarks.trim().split('\n')[0].slice(0, 60)
+    if (!window.confirm(`Delete this task?\n\n"${first}"\n\nThis cannot be undone.`)) return
+    try {
+      const { error } = await supabase.from('hustle_tasks').delete().eq('id', t.id)
+      if (error) throw error
+      if (editing?.id === t.id) { setEditing(null); setEditForm(null) }
+      toast('ok', 'Task deleted.')
+      await refresh()
+    } catch (err) { toast('error', friendlyError(err)) }
   }
 
   function startEdit(t: HustleTask) {
@@ -83,15 +107,22 @@ export default function HustleTasks() {
         </div>
       </form>
 
-      <h3>Saved Tasks</h3>
+      <h3>Saved Tasks{hustle.length > 0 && <span className="muted small"> · {openCount} open</span>}</h3>
       {!sorted.length && <Empty>No saved tasks.</Empty>}
       {sorted.map((t) => (
-        <article key={t.id} className={`card fb-card${editing?.id === t.id ? ' is-editing' : ''}`}>
+        <article key={t.id} className={`card fb-card ht-card${editing?.id === t.id ? ' is-editing' : ''}${t.completed ? ' is-done' : ''}`}>
           <div className="fb-top">
-            <div className="task-when">{t.date ? `${shortDate(t.date)}${t.time ? `, ${time12(t.time)}` : ''}` : 'No date'}</div>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => startEdit(t)}><Pencil size={14} aria-hidden /> Edit</button>
+            <label className="check ht-check">
+              <input type="checkbox" checked={!!t.completed} onChange={() => toggleDone(t)} aria-label={t.completed ? 'Mark task as not done' : 'Mark task as done'} />
+              <span className="task-when">{t.date ? `${shortDate(t.date)}${t.time ? `, ${time12(t.time)}` : ''}` : 'No date'}</span>
+            </label>
+            <span className="row-actions">
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => startEdit(t)}><Pencil size={14} aria-hidden /> Edit</button>
+              <button type="button" className="btn btn-danger btn-sm" onClick={() => remove(t)} aria-label="Delete task"><Trash2 size={14} aria-hidden /> Delete</button>
+            </span>
           </div>
-          <div className="pre">{t.remarks}</div>
+          <div className="pre ht-remarks">{t.remarks}</div>
+          {t.completed && t.completed_at && <div className="muted small">Completed {sgtDateTime(t.completed_at)}</div>}
         </article>
       ))}
     </div>

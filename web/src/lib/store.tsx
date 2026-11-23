@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { supabase } from './supabase'
-import type { Client, Feedback, FollowUpTask, HustleTask, Settings, WeeklyReport } from './types'
+import type { Client, Feedback, FollowUpTask, HustleTask, Partner, Settings, WeeklyReport } from './types'
 
 interface Data {
   clients: Client[]
@@ -8,6 +8,7 @@ interface Data {
   tasks: FollowUpTask[]
   hustle: HustleTask[]
   reports: WeeklyReport[]
+  partners: Partner[]
   settings: Settings | null
   loading: boolean
   error: string | null
@@ -19,7 +20,7 @@ const Ctx = createContext<Data | null>(null)
 
 export function DataProvider({ userId, children }: { userId: string; children: ReactNode }) {
   const [state, setState] = useState<Omit<Data, 'refresh' | 'now'>>({
-    clients: [], feedback: [], tasks: [], hustle: [], reports: [], settings: null, loading: true, error: null,
+    clients: [], feedback: [], tasks: [], hustle: [], reports: [], partners: [], settings: null, loading: true, error: null,
   })
   const [now, setNow] = useState(() => Date.now())
 
@@ -27,19 +28,22 @@ export function DataProvider({ userId, children }: { userId: string; children: R
     try {
       // ensure the settings row exists (also registers the account for scheduled jobs)
       await supabase.from('settings').upsert({ owner_id: userId }, { onConflict: 'owner_id', ignoreDuplicates: true })
-      const [c, f, t, h, r, s] = await Promise.all([
+      const [c, f, t, h, r, s, pt] = await Promise.all([
         supabase.from('clients').select('*').order('created_at', { ascending: false }),
         supabase.from('feedback').select('*').order('created_at', { ascending: false }),
         supabase.from('follow_up_tasks').select('*').eq('cancelled', false).order('due_at'),
         supabase.from('hustle_tasks').select('*').order('date', { ascending: true, nullsFirst: false }),
         supabase.from('weekly_reports').select('*').order('generated_at', { ascending: false }),
         supabase.from('settings').select('*').maybeSingle(),
+        supabase.from('partners').select('id,name,role,phone,email').order('name'),
       ])
       const err = c.error ?? f.error ?? t.error ?? h.error ?? r.error ?? s.error
       if (err) throw err
       setState({
         clients: c.data as Client[], feedback: f.data as Feedback[], tasks: t.data as FollowUpTask[],
         hustle: h.data as HustleTask[], reports: r.data as WeeklyReport[], settings: s.data as Settings | null,
+        // partners table arrives with update 0004; tolerate it missing
+        partners: (pt.error ? [] : pt.data) as Partner[],
         loading: false, error: null,
       })
     } catch (e) {

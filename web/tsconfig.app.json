@@ -5,7 +5,7 @@
     "lib": ["ES2023", "DOM"],
     "module": "esnext",
     "types": ["vite/client"],
-    "paths": { "@shared/*": ["../supabase/functions/_shared/*"] },
+    "paths": { "@shared/*": ["./src/shared/*"] },
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,
 
@@ -23,6 +23,6 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "../supabase/functions/_shared/time.ts", "../supabase/functions/_shared/report.ts"],
+  "include": ["src"],
   "exclude": ["src/sw.ts"]
 }

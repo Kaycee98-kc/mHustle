@@ -80,6 +80,12 @@ function Shell({ email }: { email: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [go])
 
+  useEffect(() => {
+    const open = () => setSettingsOpen(true)
+    window.addEventListener('mh-open-settings', open)
+    return () => window.removeEventListener('mh-open-settings', open)
+  }, [])
+
   // Hide the bottom navigation while the on-screen keyboard is likely open (mobile)
   useEffect(() => {
     const isTextInput = (el: EventTarget | null) => el instanceof HTMLElement &&
@@ -125,7 +131,8 @@ function Shell({ email }: { email: string }) {
         <div hidden={section !== 'clients'}>
           <AllClients expandedId={expandedId} setExpandedId={setExpandedId}
             onEdit={(id) => { setEditingId(id); go('new') }}
-            onAddFeedback={(id) => { setFeedbackFor(id); go('feedback') }} />
+            onAddFeedback={(id) => { setFeedbackFor(id); go('feedback') }}
+            onDeleted={(id) => { if (editingId === id) setEditingId(null); setExpandedId(null) }} />
         </div>
         <div hidden={section !== 'feedback'}>
           <Feedback preselectClientId={feedbackFor} onPreselectUsed={clearFeedbackFor} />

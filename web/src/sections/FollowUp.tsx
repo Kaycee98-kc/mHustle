@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Trash2 } from 'lucide-react'
 import { Empty, Segmented, useToast } from '../components/ui'
+import PartnerPicker from '../components/PartnerPicker'
 import { bucket, useData } from '../lib/store'
 import { friendlyError, supabase } from '../lib/supabase'
 import { sgtDateTime } from '../lib/format'
@@ -47,6 +48,29 @@ export default function FollowUp({ highlightTaskId }: { highlightTaskId: string 
     } catch (e) { toast('error', friendlyError(e)) } finally { setBusy(null) }
   }
 
+  async function remove(t: FollowUpTask) {
+    const name = byClient.get(t.client_id)?.name ?? 'this client'
+    const note = t.task_type === 'initial_email' && !t.completed
+      ? '\n\nNote: while the client is Potential and not marked Emailed, a new initial-email task is created the next time the client is edited.' : ''
+    if (!window.confirm(`Delete this follow-up for ${name}?\n\n${TASK_ACTION[t.task_type]}${note}\n\nThis cannot be undone.`)) return
+    setBusy(t.id)
+    try {
+      const { error } = await supabase.from('follow_up_tasks').delete().eq('id', t.id)
+      if (error) throw error
+      toast('ok', 'Follow-up deleted.')
+      await refresh()
+    } catch (e) { toast('error', friendlyError(e)) } finally { setBusy(null) }
+  }
+
+  async function setPartner(clientId: string, value: string) {
+    try {
+      const { error } = await supabase.from('clients').update({ partner: value }).eq('id', clientId)
+      if (error) throw error
+      toast('ok', value ? `Partner set: ${value}` : 'Partner cleared.')
+      await refresh()
+    } catch (e) { toast('error', friendlyError(e)) }
+  }
+
   const list = groups[tab]
   return (
     <div className="stack">
@@ -71,10 +95,20 @@ export default function FollowUp({ highlightTaskId }: { highlightTaskId: string 
             <div className="task-body">
               <div className="task-top">
                 <span className="client-name">{c?.name ?? 'Client'}</span>
-                <span className={`prio prio-tag-${t.priority}`}>{t.priority === 'urgent' && <AlertTriangle size={12} aria-hidden />} {PRIORITY_LABEL[t.priority]}</span>
+                <span className="task-top-right">
+                  <span className={`prio prio-tag-${t.priority}`}>{t.priority === 'urgent' && <AlertTriangle size={12} aria-hidden />} {PRIORITY_LABEL[t.priority]}</span>
+                  <button type="button" className="icon-btn icon-btn-sm" aria-label="Delete follow-up" disabled={busy === t.id} onClick={() => remove(t)}><Trash2 size={16} aria-hidden /></button>
+                </span>
               </div>
               {c?.company && <div className="client-sub">{c.company}</div>}
               <div className="task-action">{TASK_ACTION[t.task_type]}</div>
+              {c && tab !== 'done' && (
+                <div className={`task-partner${c.partner.trim() ? '' : ' needs'}`}>
+                  {c.partner.trim() ? <span>With: <strong>{c.partner}</strong></span> : <span>No partner yet — who should follow up with you?</span>}
+                  <PartnerPicker compact value={c.partner} onChange={(v) => setPartner(c.id, v)} />
+                </div>
+              )}
+              {c && tab === 'done' && c.partner.trim() && <div className="muted small">With: {c.partner}</div>}
               {detail && <div className="pre task-detail">{detail}</div>}
               {fb && <div className="muted small">Feedback of {sgtDateTime(fb.created_at)}</div>}
               <div className="task-due">

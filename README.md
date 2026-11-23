@@ -16,7 +16,8 @@ It has six sections: **New Client · All Clients · Feedback · Follow Up · Rep
 | Follow-up rules | Postgres triggers (`supabase/migrations/0001_schema.sql`). They run the same way from any device, so there are no duplicates and nothing is lost | ✅ |
 | Friday 11:59 PM report | `pg_cron` → Edge Function `report`. Runs when the app is closed | ✅ |
 | Push notifications | Web Push (VAPID) sent by the Edge Function `tick` every 15 minutes | ✅ |
-| Apple Reminders | iOS Shortcut "mHustle Sync" ↔ Edge Function `reminders-sync`. See [docs/APPLE_SHORTCUT.md](docs/APPLE_SHORTCUT.md) | ✅ |
+| iPhone / Mac Calendar | Subscribed calendar feed `web/api/calendar` (Vercel) — automatic, with 7d/2d/1d/2h alerts | ✅ |
+| Apple Reminders | iOS Shortcut "mHustle Sync" ↔ `web/api/reminders-sync` (Vercel). See [docs/APPLE_SHORTCUT.md](docs/APPLE_SHORTCUT.md) | ✅ |
 
 ### Why not iCloud / CloudKit?
 
@@ -37,7 +38,7 @@ You need: a free [Supabase](https://supabase.com) account, a free [Cloudflare](h
 ### Step 1: Create the database
 
 1. Supabase → **New project**. Region: **Southeast Asia (Singapore)**. Save the database password.
-2. **SQL Editor → New query**: paste and run `supabase/migrations/0001_schema.sql`, then `supabase/migrations/0002_sync_and_schedules.sql`.
+2. **SQL Editor → New query**: paste and run `supabase/migrations/0001_schema.sql`, then `0002_sync_and_schedules.sql`, then `0003_delete_calendar_sync.sql`.
 
 ### Step 2: Lock down sign-in (single user)
 
@@ -61,7 +62,6 @@ supabase link --project-ref YOUR-PROJECT-REF
 supabase secrets set CRON_SECRET=... VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:you@example.com
 supabase functions deploy report --no-verify-jwt
 supabase functions deploy tick --no-verify-jwt
-supabase functions deploy reminders-sync --no-verify-jwt
 ```
 
 `--no-verify-jwt` is intentional. Each function checks its own credential instead: the cron secret, the Shortcut sync token, or your sign-in token.
@@ -170,13 +170,14 @@ Project layout:
 
 ```
 web/                      React + TypeScript PWA
+  api/calendar.ts         subscribed calendar feed (Vercel function)
+  api/reminders-sync.ts   Apple Shortcut bridge (Vercel function)
   src/sections/           NewClient, AllClients, Feedback, FollowUp, Report, HustleTasks
   src/sw.ts               service worker (offline shell + push)
 supabase/
   migrations/             schema, RLS, triggers (business rules)
   functions/report        manual + Friday report
   functions/tick          push notifications + report catch-up
-  functions/reminders-sync  Apple Shortcut bridge
   functions/_shared       time.ts, report.ts (shared with the web app)
   setup/schedules.sql     pg_cron jobs
 docs/APPLE_SHORTCUT.md

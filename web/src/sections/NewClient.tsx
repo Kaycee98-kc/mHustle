@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { CalendarClock, GraduationCap, Sparkles } from 'lucide-react'
 import { AutoTextarea, Field, useToast } from '../components/ui'
+import PartnerPicker from '../components/PartnerPicker'
 import { EMAIL_RE, TIME_RE, hhmm, newId, useDraft } from '../lib/hooks'
 import { useData } from '../lib/store'
 import { friendlyError, supabase } from '../lib/supabase'
@@ -104,6 +105,11 @@ export default function NewClient({ editingId, onEditDone }: { editingId: string
     const e = validate(f)
     setErrors(e)
     if (Object.keys(e).length) { toast('error', 'Please correct the highlighted fields.'); return }
+    if (f.schedule_type !== 'potential' && !f.partner.trim() &&
+        !window.confirm(`No partner or consultant is selected for this ${f.schedule_type}.\n\nSave without a partner? (Choose Cancel to pick one.)`)) {
+      document.getElementById('nc-partner')?.focus()
+      return
+    }
     setSaving(true)
     try {
       if (editForm && editing) {
@@ -145,7 +151,9 @@ export default function NewClient({ editingId, onEditDone }: { editingId: string
       {text('contact', 'Contact', { type: 'tel', inputMode: 'tel', placeholder: '+65 9123 4567', autoComplete: 'tel' })}
       {text('email', 'Email', { type: 'email', inputMode: 'email', autoComplete: 'email' })}
       {text('course', 'Course')}
-      {text('partner', 'Partner', { placeholder: 'e.g. Melvin, Lynn' })}
+      <Field label="Partner" htmlFor="nc-partner">
+        <PartnerPicker id="nc-partner" value={f.partner} onChange={(v) => set('partner', v)} />
+      </Field>
       <Field label="Remarks" htmlFor="nc-remarks">
         <AutoTextarea id="nc-remarks" value={f.remarks} onChange={(e) => set('remarks', e.target.value)}
           placeholder="Discussions, operational challenges, pain points, training requirements, concerns, email talking points…" />
@@ -209,6 +217,9 @@ export default function NewClient({ editingId, onEditDone }: { editingId: string
           </div>
         )}
 
+        {f.schedule_type !== 'potential' && !f.partner.trim() && (
+          <p className="nudge">Who's joining this {f.schedule_type}? Select a partner or consultant above.</p>
+        )}
         <p className="hint">
           Apple Reminders list: <strong>{f.schedule_type === 'potential' ? 'Follow Up' : 'Clients'}</strong>
           {f.schedule_type !== 'potential' && ' — alerts 7 days, 2 days, 1 day and 2 hours before'}

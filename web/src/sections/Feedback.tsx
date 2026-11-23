@@ -1,21 +1,21 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Pencil } from 'lucide-react'
+import { CalendarClock, Pencil } from 'lucide-react'
 import { AutoTextarea, Empty, Field, useToast } from '../components/ui'
 import { newId, useDraft } from '../lib/hooks'
 import { useData } from '../lib/store'
 import { friendlyError, supabase } from '../lib/supabase'
-import { clientLabel, sgtDateTime } from '../lib/format'
+import { clientLabel, scheduleLine, sgtDateTime, shortDate, time12 } from '../lib/format'
 import type { Feedback as FB } from '../lib/types'
 
-interface Draft { draftId: string; clientId: string; content: string }
+interface Draft { draftId: string; clientId: string; content: string; postpone: boolean; newDate: string; newTime: string }
 
 export default function Feedback({ preselectClientId, onPreselectUsed }: { preselectClientId: string | null; onPreselectUsed: () => void }) {
   const { clients, feedback, refresh } = useData()
   const toast = useToast()
-  const [draft, setDraft, clearDraft] = useDraft<Draft>('mh-draft-feedback', { draftId: newId(), clientId: '', content: '' })
+  const [draft, setDraft, clearDraft] = useDraft<Draft>('mh-draft-feedback', { draftId: newId(), clientId: '', content: '', postpone: false, newDate: '', newTime: '' })
   const [editing, setEditing] = useState<FB | null>(null)
   const [editContent, setEditContent] = useState('')
-  const [errors, setErrors] = useState<{ client?: string; content?: string }>({})
+  const [errors, setErrors] = useState<{ client?: string; content?: string; newDate?: string; newTime?: string }>({})
   const [saving, setSaving] = useState(false)
   const [onlySelected, setOnlySelected] = useState(false)
 
@@ -31,6 +31,8 @@ export default function Feedback({ preselectClientId, onPreselectUsed }: { prese
   const byId = useMemo(() => new Map(clients.map((c) => [c.id, c])), [clients])
   const sorted = useMemo(() => [...clients].sort((a, b) => a.name.localeCompare(b.name)), [clients])
   const selected = draft.clientId ? byId.get(draft.clientId) : undefined
+  const canPostpone = selected?.schedule_type === 'appointment' || selected?.schedule_type === 'lesson'
+  const postponing = canPostpone && draft.postpone
 
   async function submit(ev: FormEvent) {
     ev.preventDefault()
@@ -38,25 +40,33 @@ export default function Feedback({ preselectClientId, onPreselectUsed }: { prese
     if (editing) return saveEdit()
     const e: typeof errors = {}
     if (!draft.clientId || !byId.has(draft.clientId)) e.client = 'Please select a client.'
-    if (!draft.content.trim()) e.content = 'Feedback cannot be empty.'
+    if (postponing) {
+      if (!draft.newDate) e.newDate = 'Please choose the new date.'
+      if (!draft.newTime) e.newTime = 'Please choose the new time.'
+    } else if (!draft.content.trim()) e.content = 'Feedback cannot be empty.'
     setErrors(e)
     if (Object.keys(e).length) return
     setSaving(true)
     try {
-      const { error } = await supabase.from('feedback').insert({ id: draft.draftId, client_id: draft.clientId, content: draft.content })
+      const { error } = await supabase.from('feedback').insert({
+        id: draft.draftId, client_id: draft.clientId, content: draft.content,
+        ...(postponing ? { postpone_date: draft.newDate, postpone_time: draft.newTime } : {}),
+      })
       if (error && error.code !== '23505') throw error
-      toast('ok', selected?.schedule_type === 'appointment'
-        ? 'Feedback saved — urgent follow-up created in Follow Up.'
-        : 'Feedback saved.')
+      toast('ok', postponing
+        ? `Postponed to ${shortDate(draft.newDate)}, ${time12(draft.newTime)} — reminders and calendar updated.`
+        : selected?.schedule_type === 'appointment'
+          ? 'Feedback saved — urgent follow-up created in Follow Up.'
+          : 'Feedback saved.')
       clearDraft()
-      setDraft({ draftId: newId(), clientId: draft.clientId, content: '' })
+      setDraft({ draftId: newId(), clientId: draft.clientId, content: '', postpone: false, newDate: '', newTime: '' })
       await refresh()
     } catch (err) { toast('error', friendlyError(err)) } finally { setSaving(false) }
   }
 
   async function saveEdit() {
     if (!editing) return
-    if (!editContent.trim()) { setErrors({ content: 'Feedback cannot be empty.' }); return }
+    if (!editContent.trim() && !editing.postpone_date) { setErrors({ content: 'Feedback cannot be empty.' }); return }
     setSaving(true)
     try {
       const { error } = await supabase.from('feedback').update({ content: editContent }).eq('id', editing.id)
@@ -92,17 +102,38 @@ export default function Feedback({ preselectClientId, onPreselectUsed }: { prese
             </select>
           </Field>
         )}
-        <Field label="Feedback" htmlFor="fb-content" required error={errors.content}>
+        {!editing && canPostpone && selected && (
+          <div className="action-done">
+            <label className="check">
+              <input type="checkbox" checked={draft.postpone} onChange={(e) => setDraft((d) => ({ ...d, postpone: e.target.checked }))} />
+              <span><CalendarClock size={16} aria-hidden style={{ verticalAlign: '-3px' }} /> Postpone</span>
+            </label>
+            {draft.postpone && (
+              <>
+                <p className="hint">Currently: {scheduleLine(selected)}. The {selected.schedule_type} moves to the new date and time{selected.schedule_type === 'lesson' ? ' (lesson length and end date shift with it)' : ''}.</p>
+                <div className="pair">
+                  <Field label="New Date" htmlFor="fb-pdate" required error={errors.newDate}>
+                    <input id="fb-pdate" type="date" value={draft.newDate} onChange={(e) => { setDraft((d) => ({ ...d, newDate: e.target.value })); setErrors((x) => ({ ...x, newDate: undefined })) }} />
+                  </Field>
+                  <Field label="New Time" htmlFor="fb-ptime" required error={errors.newTime}>
+                    <input id="fb-ptime" type="time" value={draft.newTime} onChange={(e) => { setDraft((d) => ({ ...d, newTime: e.target.value })); setErrors((x) => ({ ...x, newTime: undefined })) }} />
+                  </Field>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        <Field label={postponing ? 'Feedback (optional)' : 'Feedback'} htmlFor="fb-content" required={!postponing} error={errors.content}>
           <AutoTextarea id="fb-content" value={editing ? editContent : draft.content}
             onChange={(e) => { if (editing) setEditContent(e.target.value); else setDraft((d) => ({ ...d, content: e.target.value })); setErrors((x) => ({ ...x, content: undefined })) }}
             placeholder="Responses, objections, concerns, suggestions, satisfaction, follow-up discussions, changed requirements…" />
         </Field>
-        {!editing && selected?.schedule_type === 'appointment' && (
+        {!editing && selected?.schedule_type === 'appointment' && !postponing && (
           <p className="hint">This is an Appointment client — submitting will create an urgent follow-up.</p>
         )}
         <div className="form-actions">
           {editing && <button type="button" className="btn btn-ghost" onClick={() => setEditing(null)} disabled={saving}>Cancel Edit</button>}
-          <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : editing ? 'Save Changes' : 'Submit Feedback'}</button>
+          <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : editing ? 'Save Changes' : postponing ? 'Submit & Postpone' : 'Submit Feedback'}</button>
         </div>
       </form>
 
@@ -128,7 +159,10 @@ export default function Feedback({ preselectClientId, onPreselectUsed }: { prese
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => startEdit(f)}><Pencil size={14} aria-hidden /> Edit</button>
             </div>
             <div className="muted small">{sgtDateTime(f.created_at)}{f.updated_at !== f.created_at && ` · edited ${sgtDateTime(f.updated_at)}`}</div>
-            <div className="pre">{f.content}</div>
+            {f.postpone_date && (
+              <div className="postpone-badge"><CalendarClock size={14} aria-hidden /> Postponed{f.previous_date ? ` from ${shortDate(f.previous_date)}, ${time12(f.previous_time)}` : ''} to {shortDate(f.postpone_date)}, {time12(f.postpone_time)}</div>
+            )}
+            {f.content && <div className="pre">{f.content}</div>}
           </article>
         )
       })}

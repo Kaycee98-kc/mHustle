@@ -30,6 +30,18 @@ export interface Feedback {
   content: string
   created_at: string
   updated_at: string
+  postpone_date?: string | null
+  postpone_time?: string | null
+  previous_date?: string | null
+  previous_time?: string | null
+}
+
+export interface Partner {
+  id: string
+  name: string
+  role: 'Partner' | 'Consultant'
+  phone: string
+  email: string
 }
 
 export type TaskType = 'initial_email' | 'next_monday' | 'appointment_feedback'
@@ -58,6 +70,8 @@ export interface HustleTask {
   remarks: string
   date: string | null
   time: string | null
+  completed?: boolean
+  completed_at?: string | null
   created_at: string
   updated_at: string
   reminder_reference: string | null

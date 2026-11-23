@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Bell, BellOff, Copy, KeyRound, LogOut, X } from 'lucide-react'
+import { Bell, BellOff, CalendarPlus, Copy, KeyRound, LogOut, Plus, Trash2, X } from 'lucide-react'
 import { Field, useToast } from './ui'
 import { useData } from '../lib/store'
-import { friendlyError, functionsUrl, supabase } from '../lib/supabase'
+import { friendlyError, supabase } from '../lib/supabase'
 import { currentSubscription, disablePush, enablePush, pushSupport } from '../lib/push'
 import { hhmm } from '../lib/hooks'
 
 export default function SettingsSheet({ onClose, email }: { onClose: () => void; email: string }) {
-  const { settings, refresh } = useData()
+  const { settings, refresh, partners } = useData()
+  const [np, setNp] = useState({ name: '', role: 'Partner' as 'Partner' | 'Consultant', phone: '', email: '' })
   const toast = useToast()
   const [pushOn, setPushOn] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -22,6 +23,9 @@ export default function SettingsSheet({ onClose, email }: { onClose: () => void;
     quiet_end: hhmm(settings?.quiet_end) || '08:00',
   })
   const support = pushSupport()
+  const syncUrl = `${window.location.origin}/api/reminders-sync`
+  const httpsCalUrl = (t: string) => `${window.location.origin}/api/calendar?t=${t}`
+  const webcalUrl = (t: string) => `webcal://${window.location.host}/api/calendar?t=${t}`
 
   useEffect(() => { void currentSubscription().then((s) => setPushOn(Boolean(s))) }, [])
   useEffect(() => {
@@ -48,8 +52,25 @@ export default function SettingsSheet({ onClose, email }: { onClose: () => void;
     } catch (e) { toast('error', friendlyError(e)) } finally { setBusy(false) }
   }
 
+  async function addPartner() {
+    const name = np.name.trim().replace(/,/g, ' ')
+    if (!name) { toast('error', 'Please enter a name.'); return }
+    const { error } = await supabase.from('partners').insert({ name, role: np.role, phone: np.phone.trim(), email: np.email.trim() })
+    if (error) { toast('error', error.code === '23505' ? `${name} is already in your list.` : /relation .*partners/i.test(error.message) ? 'Run database update 0004 first.' : friendlyError(error)); return }
+    setNp({ name: '', role: np.role, phone: '', email: '' })
+    toast('ok', `${name} added.`)
+    await refresh()
+  }
+
+  async function removePartner(id: string, name: string) {
+    if (!window.confirm(`Remove ${name} from your list?\n\nClients that already list ${name} keep the name.`)) return
+    const { error } = await supabase.from('partners').delete().eq('id', id)
+    if (error) { toast('error', friendlyError(error)); return }
+    await refresh()
+  }
+
   async function newToken() {
-    if (settings?.sync_token_hash && !window.confirm('Create a new sync token? The Shortcut will stop working until you paste the new token into it.')) return
+    if (settings?.sync_token_hash && !window.confirm('Create a new link? Your current Calendar subscription and Shortcut will stop working until you set them up with the new one.')) return
     const bytes = crypto.getRandomValues(new Uint8Array(32))
     const t = [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('')
     const { error } = await supabase.rpc('mh_set_sync_token', { p_token: t })
@@ -110,16 +131,56 @@ export default function SettingsSheet({ onClose, email }: { onClose: () => void;
         </section>
 
         <section>
-          <h3>Apple Reminders sync</h3>
-          <p className="hint">The “mHustle Sync” Shortcut uses this address and token to update the <strong>Clients</strong>, <strong>Follow Up</strong> and <strong>Hustle Task</strong> lists.</p>
-          <div className="copy-row"><code>{functionsUrl}/reminders-sync</code><button type="button" className="icon-btn" aria-label="Copy address" onClick={() => copy(`${functionsUrl}/reminders-sync`)}><Copy size={16} /></button></div>
-          {token && (
-            <div className="token-box">
-              <p className="hint"><strong>Copy this token now</strong> — it is shown only once.</p>
-              <div className="copy-row"><code>{token}</code><button type="button" className="icon-btn" aria-label="Copy token" onClick={() => copy(token)}><Copy size={16} /></button></div>
-            </div>
+          <h3>Partners &amp; Consultants</h3>
+          <p className="hint">Colleagues you can tick in the Partner field. mHustle reminds you when an appointment, lesson or follow-up has no one assigned.</p>
+          {partners.length > 0 && (
+            <ul className="partner-list">
+              {partners.map((p) => (
+                <li key={p.id}>
+                  <span><strong>{p.name}</strong> <span className={`badge ${p.role === 'Partner' ? 'badge-appointment' : 'badge-lesson'}`}>{p.role}</span>
+                    {(p.phone || p.email) && <span className="muted small"> · {[p.phone, p.email].filter(Boolean).join(' · ')}</span>}</span>
+                  <button type="button" className="icon-btn icon-btn-sm" aria-label={`Remove ${p.name}`} onClick={() => removePartner(p.id, p.name)}><Trash2 size={16} /></button>
+                </li>
+              ))}
+            </ul>
           )}
-          <button type="button" className="btn btn-ghost" onClick={newToken}><KeyRound size={16} /> {settings?.sync_token_hash ? 'Replace sync token' : 'Create sync token'}</button>
+          <div className="pair">
+            <Field label="Name" htmlFor="pt-name"><input id="pt-name" type="text" value={np.name} onChange={(e) => setNp({ ...np, name: e.target.value })} /></Field>
+            <Field label="Role" htmlFor="pt-role">
+              <select id="pt-role" value={np.role} onChange={(e) => setNp({ ...np, role: e.target.value as 'Partner' | 'Consultant' })}>
+                <option>Partner</option><option>Consultant</option>
+              </select>
+            </Field>
+          </div>
+          <div className="pair">
+            <Field label="Phone (optional)" htmlFor="pt-phone"><input id="pt-phone" type="tel" value={np.phone} onChange={(e) => setNp({ ...np, phone: e.target.value })} /></Field>
+            <Field label="Email (optional)" htmlFor="pt-email"><input id="pt-email" type="email" value={np.email} onChange={(e) => setNp({ ...np, email: e.target.value })} /></Field>
+          </div>
+          <button type="button" className="btn btn-primary" onClick={addPartner}><Plus size={16} /> Add to list</button>
+        </section>
+
+        <section>
+          <h3>iPhone Calendar &amp; Apple Reminders</h3>
+          <p className="hint">One private link keeps your Calendar up to date automatically (Appointments, Lessons, Hustle Tasks and open Follow Ups, with 7-day, 2-day, 1-day and 2-hour alerts). The same token lets the “mHustle Sync” Shortcut update Apple Reminders.</p>
+          {token ? (
+            <div className="token-box">
+              <p className="hint"><strong>Save these now</strong> — the token is shown only once. Creating a new token disconnects the old links.</p>
+              <div className="btn-row">
+                <a className="btn btn-primary" href={webcalUrl(token)}><CalendarPlus size={16} /> Add to Calendar</a>
+                <button type="button" className="btn btn-ghost" onClick={() => copy(httpsCalUrl(token))}><Copy size={16} /> Copy calendar link</button>
+              </div>
+              <div className="field"><label>Shortcut address</label>
+                <div className="copy-row"><code>{syncUrl}</code><button type="button" className="icon-btn" aria-label="Copy address" onClick={() => copy(syncUrl)}><Copy size={16} /></button></div></div>
+              <div className="field"><label>Token</label>
+                <div className="copy-row"><code>{token}</code><button type="button" className="icon-btn" aria-label="Copy token" onClick={() => copy(token)}><Copy size={16} /></button></div></div>
+              <p className="hint">On iPhone: tap <strong>Add to Calendar</strong> → Subscribe. Then in Settings → Apps → Calendar → Calendar Accounts → mHustle, turn <strong>off “Remove Alerts”</strong>.</p>
+            </div>
+          ) : (
+            <p className="hint">{settings?.sync_token_hash ? 'A link is active. To set up another device, create a new link (the old one stops working).' : 'No link yet.'}</p>
+          )}
+          <button type="button" className={`btn ${settings?.sync_token_hash ? 'btn-ghost' : 'btn-primary'}`} onClick={newToken}>
+            <KeyRound size={16} /> {settings?.sync_token_hash ? 'Create new calendar & sync link' : 'Create calendar & sync link'}
+          </button>
         </section>
 
         <section>

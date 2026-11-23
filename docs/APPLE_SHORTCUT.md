@@ -1,5 +1,7 @@
 # Apple Reminders — the "mHustle Sync" Shortcut
 
+> **Only want alerts on your iPhone?** The subscribed **Calendar** link (⚙ Settings → Add to Calendar) is fully automatic and already gives 7-day, 2-day, 1-day and 2-hour alerts. This Shortcut is only needed if you also want items in the Reminders app.
+
 ## Why a Shortcut?
 
 Web apps (including home-screen PWAs) have **no access to Apple Reminders**. EventKit, Apple's Reminders API, is only available to native apps, and a native app would need the paid Apple Developer Program ($99/yr) plus App Store or TestFlight distribution.
@@ -16,7 +18,7 @@ The supported free route is **Apple Shortcuts**, which can find, add and remove 
 ## One-time setup
 
 1. In the **Reminders** app, create three lists named exactly **Clients**, **Follow Up** and **Hustle Task** (singular). Do not create a Potential Clients list.
-2. In mHustle, open **⚙ Settings → Apple Reminders sync → Create sync token**. Copy the **address** and the **token**. The token is shown only once.
+2. In mHustle, open **⚙ Settings → Create calendar & sync link**. Copy the **Shortcut address** (`https://m-hustle.vercel.app/api/reminders-sync`) and the **token**. The token is shown only once. The same token also powers the Calendar subscription.
 
 ## Build the Shortcut (iPhone: Shortcuts app → +)
 
@@ -25,7 +27,7 @@ Name it **mHustle Sync**. Add these actions in order. Words in *italics* are the
 **Part A: pull changes**
 
 1. **Text**: paste the token. Rename the output to *Token*.
-2. **Text**: paste the address (…/functions/v1/reminders-sync). Rename it to *SyncURL*.
+2. **Text**: paste the address `https://m-hustle.vercel.app/api/reminders-sync`. Rename it to *SyncURL*.
 3. **Get Contents of URL**: URL *SyncURL*. Method *GET*. Headers: `x-mhustle-token` = *Token*.
 4. **Get Dictionary Value**: *ops* from *Contents of URL*.
 5. **Repeat with Each** item in *Dictionary Value*:

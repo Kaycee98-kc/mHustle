@@ -3,11 +3,10 @@ import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath } from 'node:url'
 
-const shared = fileURLToPath(new URL('../supabase/functions/_shared', import.meta.url))
+const shared = fileURLToPath(new URL('./src/shared', import.meta.url))
 
 export default defineConfig({
   resolve: { alias: { '@shared': shared } },
-  server: { fs: { allow: ['..'] } },
   plugins: [
     react(),
     VitePWA({

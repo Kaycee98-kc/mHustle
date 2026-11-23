@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Field } from './ui'
-import { configured, friendlyError, supabase } from '../lib/supabase'
+import { configError, configured, friendlyError, supabase } from '../lib/supabase'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -20,7 +20,7 @@ export default function Login() {
     <div className="login">
       <h1 className="brand">mHustle</h1>
       {!configured ? (
-        <div className="card"><p>This deployment is missing its Supabase settings (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY). See the README.</p></div>
+        <div className="card"><p>{configError} Fix it in Vercel → Settings → Environment Variables, then redeploy.</p></div>
       ) : (
         <form className="card form" onSubmit={submit}>
           <Field label="Email" htmlFor="li-email">
