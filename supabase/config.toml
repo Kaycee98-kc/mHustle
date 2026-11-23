@@ -1,0 +1,9 @@
+# These functions authenticate requests themselves (cron secret, sync token or user JWT).
+[functions.report]
+verify_jwt = false
+
+[functions.tick]
+verify_jwt = false
+
+[functions.reminders-sync]
+verify_jwt = false
