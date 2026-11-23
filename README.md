@@ -38,7 +38,7 @@ You need: a free [Supabase](https://supabase.com) account, a free [Cloudflare](h
 ### Step 1: Create the database
 
 1. Supabase → **New project**. Region: **Southeast Asia (Singapore)**. Save the database password.
-2. **SQL Editor → New query**: paste and run `supabase/migrations/0001_schema.sql`, then `0002_sync_and_schedules.sql`, `0003_delete_calendar_sync.sql`, `0004_complete_postpone.sql` and `0005_shared_workspace.sql`. To add a colleague, create their login under Authentication → Users; everyone with a login shares the same data.
+2. **SQL Editor → New query**: paste and run `supabase/migrations/0001_schema.sql`, then `0002_sync_and_schedules.sql`, `0003_delete_calendar_sync.sql`, `0004_complete_postpone.sql`, `0005_shared_workspace.sql` and `0006_whatsapp.sql`. To add a colleague, create their login under Authentication → Users; everyone with a login shares the same data.
 
 ### Step 2: Lock down sign-in (single user)
 

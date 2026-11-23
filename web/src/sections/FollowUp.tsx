@@ -4,7 +4,7 @@ import { Empty, Segmented, useToast } from '../components/ui'
 import PartnerPicker from '../components/PartnerPicker'
 import { bucket, useData } from '../lib/store'
 import { friendlyError, supabase } from '../lib/supabase'
-import { sgtDateTime } from '../lib/format'
+import { sgtDateTime, waLink } from '../lib/format'
 import { TASK_ACTION, type FollowUpTask } from '../lib/types'
 
 type Tab = 'todo' | 'miss' | 'done'
@@ -119,6 +119,7 @@ export default function FollowUp({ highlightTaskId }: { highlightTaskId: string 
               {c && tab !== 'done' && (c.contact || c.email) && (
                 <div className="task-links">
                   {c.contact && <a href={`tel:${c.contact.replace(/[^\d+]/g, '')}`}>Call</a>}
+                  {c.contact && waLink(c.contact) && <a href={waLink(c.contact)!} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
                   {c.email && <a href={`mailto:${c.email}`}>Email</a>}
                 </div>
               )}

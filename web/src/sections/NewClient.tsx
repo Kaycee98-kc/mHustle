@@ -15,12 +15,13 @@ interface Form {
   appointment_date: string; appointment_time: string
   lesson_date_from: string; lesson_date_to: string; lesson_time_from: string; lesson_time_to: string
   emailed: boolean
+  whatsapped: boolean
 }
 
 const blank = (): Form => ({
   draftId: newId(), name: '', company: '', address: '', contact: '', email: '', course: '', partner: '', remarks: '',
   schedule_type: 'appointment', appointment_date: '', appointment_time: '',
-  lesson_date_from: '', lesson_date_to: '', lesson_time_from: '', lesson_time_to: '', emailed: false,
+  lesson_date_from: '', lesson_date_to: '', lesson_time_from: '', lesson_time_to: '', emailed: false, whatsapped: false,
 })
 
 const fromClient = (c: Client): Form => ({
@@ -28,7 +29,7 @@ const fromClient = (c: Client): Form => ({
   course: c.course, partner: c.partner, remarks: c.remarks, schedule_type: c.schedule_type,
   appointment_date: c.appointment_date ?? '', appointment_time: hhmm(c.appointment_time),
   lesson_date_from: c.lesson_date_from ?? '', lesson_date_to: c.lesson_date_to ?? '',
-  lesson_time_from: hhmm(c.lesson_time_from), lesson_time_to: hhmm(c.lesson_time_to), emailed: c.emailed,
+  lesson_time_from: hhmm(c.lesson_time_from), lesson_time_to: hhmm(c.lesson_time_to), emailed: c.emailed, whatsapped: !!c.whatsapped,
 })
 
 function validate(f: Form): Record<string, string> {
@@ -67,6 +68,7 @@ function toRow(f: Form) {
     lesson_time_from: f.schedule_type === 'lesson' ? n(f.lesson_time_from) : null,
     lesson_time_to: f.schedule_type === 'lesson' ? n(f.lesson_time_to) : null,
     emailed: f.schedule_type === 'potential' ? f.emailed : false,
+    whatsapped: f.schedule_type === 'potential' ? f.whatsapped : false,
   }
 }
 
@@ -122,7 +124,7 @@ export default function NewClient({ editingId, onEditDone }: { editingId: string
         // draftId doubles as the record id → resubmitting the same draft cannot create a duplicate
         const { error } = await supabase.from('clients').insert({ id: f.draftId, ...toRow(f) })
         if (error && error.code !== '23505') throw error
-        toast('ok', `${f.name.trim()} saved${f.schedule_type === 'potential' && !f.emailed ? ' — initial-email follow-up created' : ''}.`)
+        toast('ok', `${f.name.trim()} saved${f.schedule_type === 'potential' && !f.emailed && !f.whatsapped ? ' — initial-contact follow-up created' : ''}.`)
         clearDraft()
         setDraft(blank())
         await refresh()
@@ -205,14 +207,20 @@ export default function NewClient({ editingId, onEditDone }: { editingId: string
         {f.schedule_type === 'potential' && (
           <div className="action-done">
             <div className="action-title">Action Done</div>
-            <label className="check">
-              <input type="checkbox" checked={f.emailed} onChange={(e) => set('emailed', e.target.checked)} />
-              <span>Emailed</span>
-            </label>
+            <div className="check-row">
+              <label className="check">
+                <input type="checkbox" checked={f.emailed} onChange={(e) => set('emailed', e.target.checked)} />
+                <span>Emailed</span>
+              </label>
+              <label className="check">
+                <input type="checkbox" checked={f.whatsapped} onChange={(e) => set('whatsapped', e.target.checked)} />
+                <span>WhatsApp</span>
+              </label>
+            </div>
             <p className="hint">
-              {f.emailed
+              {f.emailed || f.whatsapped
                 ? 'A one-time follow-up will be scheduled for the next Monday (Follow Up list).'
-                : 'An initial-email follow-up will remind you to email this client as soon as possible.'}
+                : 'A follow-up will remind you to email or WhatsApp this client as soon as possible.'}
             </p>
           </div>
         )}

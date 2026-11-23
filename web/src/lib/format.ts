@@ -17,3 +17,12 @@ export function scheduleLine(c: Client): string {
 }
 
 export const clientLabel = (c: Pick<Client, 'name' | 'company'>) => (c.company ? `${c.name} — ${c.company}` : c.name)
+
+/** wa.me link for a phone number; 8-digit Singapore numbers get +65. */
+export function waLink(contact: string): string | null {
+  let d = contact.replace(/[^\d+]/g, '')
+  if (d.startsWith('+')) d = d.slice(1)
+  else if (d.startsWith('00')) d = d.slice(2)
+  if (/^[689]\d{7}$/.test(d)) d = '65' + d
+  return d.length >= 8 ? `https://wa.me/${d}` : null
+}

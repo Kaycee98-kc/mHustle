@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
-import { ChevronDown, MailCheck, MessageSquarePlus, Pencil, Search, Trash2, X } from 'lucide-react'
+import { ChevronDown, MailCheck, MessageCircle, MessageSquarePlus, Pencil, Search, Trash2, X } from 'lucide-react'
 import { Empty, Segmented, useToast } from '../components/ui'
 import { bucket, useData } from '../lib/store'
 import { friendlyError, supabase } from '../lib/supabase'
-import { scheduleLine, sgtDateTime, shortDate, time12 } from '../lib/format'
+import { scheduleLine, sgtDateTime, shortDate, time12, waLink } from '../lib/format'
 import { SCHEDULE_LABEL, TASK_ACTION, type Client, type ScheduleType } from '../lib/types'
 
 type Filter = 'all' | ScheduleType
@@ -39,7 +39,7 @@ export default function AllClients({ expandedId, setExpandedId, onEdit, onAddFee
   const toggleSel = (id: string) => setSelected((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n })
   const allShownSelected = shown.length > 0 && shown.every((c) => selected.has(c.id))
   const selectAllShown = () => setSelected((p) => { const n = new Set(p); if (allShownSelected) shown.forEach((c) => n.delete(c.id)); else shown.forEach((c) => n.add(c.id)); return n })
-  const emailable = sel.filter((c) => c.schedule_type === 'potential' && !c.emailed)
+  const emailable = sel.filter((c) => c.schedule_type === 'potential' && !c.emailed && !c.whatsapped)
 
   async function bulkDelete() {
     if (!sel.length) return
@@ -119,12 +119,16 @@ function ClientCard({ c, open, checked, onCheck, feedbackCount, onToggle, onEdit
   const toast = useToast()
   const [busy, setBusy] = useState(false)
 
-  async function toggleEmailed(v: boolean) {
+  async function toggleContact(field: 'emailed' | 'whatsapped', v: boolean) {
     setBusy(true)
     try {
-      const { error } = await supabase.from('clients').update({ emailed: v }).eq('id', c.id)
+      const { error } = await supabase.from('clients').update({ [field]: v }).eq('id', c.id)
       if (error) throw error
-      toast('ok', v ? 'Marked as emailed — next-Monday follow-up scheduled.' : 'Emailed cleared — initial-email follow-up reopened.')
+      const label = field === 'emailed' ? 'Emailed' : 'WhatsApp'
+      const other = field === 'emailed' ? c.whatsapped : c.emailed
+      toast('ok', v
+        ? (other ? `${label} recorded.` : `${label} recorded — next-Monday follow-up scheduled.`)
+        : (other ? `${label} cleared.` : `${label} cleared — initial-contact follow-up reopened.`))
       await refresh()
     } catch (e) { toast('error', friendlyError(e)) } finally { setBusy(false) }
   }
@@ -173,7 +177,10 @@ function ClientCard({ c, open, checked, onCheck, feedbackCount, onToggle, onEdit
             {row('Name', c.name)}
             {row('Company', c.company)}
             {row('Address', c.address)}
-            {c.contact && <div className="detail"><dt>Contact</dt><dd><a href={`tel:${c.contact.replace(/[^\d+]/g, '')}`}>{c.contact}</a></dd></div>}
+            {c.contact && <div className="detail"><dt>Contact</dt><dd>
+              <a href={`tel:${c.contact.replace(/[^\d+]/g, '')}`}>{c.contact}</a>
+              {waLink(c.contact) && <a className="wa-link" href={waLink(c.contact)!} target="_blank" rel="noopener noreferrer"><MessageCircle size={14} aria-hidden /> WhatsApp</a>}
+            </dd></div>}
             {c.email && <div className="detail"><dt>Email</dt><dd><a href={`mailto:${c.email}`}>{c.email}</a></dd></div>}
             {row('Course', c.course)}
             {row('Partner', c.partner)}
@@ -189,10 +196,16 @@ function ClientCard({ c, open, checked, onCheck, feedbackCount, onToggle, onEdit
           {c.schedule_type === 'potential' && (
             <div className="action-done">
               <div className="action-title">Action Done</div>
-              <label className="check">
-                <input type="checkbox" checked={c.emailed} disabled={busy} onChange={(e) => toggleEmailed(e.target.checked)} />
-                <span>Emailed{c.emailed_at && <span className="muted"> · {sgtDateTime(c.emailed_at)}</span>}</span>
-              </label>
+              <div className="check-row">
+                <label className="check">
+                  <input type="checkbox" checked={c.emailed} disabled={busy} onChange={(e) => toggleContact('emailed', e.target.checked)} />
+                  <span>Emailed{c.emailed_at && <span className="muted"> · {sgtDateTime(c.emailed_at)}</span>}</span>
+                </label>
+                <label className="check">
+                  <input type="checkbox" checked={!!c.whatsapped} disabled={busy} onChange={(e) => toggleContact('whatsapped', e.target.checked)} />
+                  <span>WhatsApp{c.whatsapped_at && <span className="muted"> · {sgtDateTime(c.whatsapped_at)}</span>}</span>
+                </label>
+              </div>
             </div>
           )}
 

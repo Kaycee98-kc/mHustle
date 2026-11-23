@@ -19,6 +19,8 @@ export interface Client {
   lesson_time_to: string | null
   emailed: boolean
   emailed_at: string | null
+  whatsapped?: boolean
+  whatsapped_at?: string | null
   created_at: string
   updated_at: string
   reminder_reference: string | null
@@ -110,7 +112,7 @@ export const SCHEDULE_LABEL: Record<ScheduleType, string> = {
 }
 
 export const TASK_ACTION: Record<TaskType, string> = {
-  initial_email: 'Send initial email',
+  initial_email: 'Send initial email or WhatsApp',
   next_monday: 'Next-Monday follow-up',
   appointment_feedback: 'Urgent follow-up on appointment feedback',
 }
