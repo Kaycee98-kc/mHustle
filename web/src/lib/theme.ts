@@ -1,13 +1,13 @@
-// Appearance: Dark (default), Light, or Match device. Remembered per device.
+// Appearance: Original (light, default), Dark, or Match device. Remembered per device.
 export type ThemeChoice = 'dark' | 'light' | 'system'
 const KEY = 'mh-theme'
-const META = { dark: '#111514', light: '#ffffff' }
+const META = { dark: '#111514', light: '#0f2a4a' }
 
 export function getThemeChoice(): ThemeChoice {
   try {
     const v = localStorage.getItem(KEY)
-    return v === 'light' || v === 'system' ? v : 'dark'
-  } catch { return 'dark' }
+    return v === 'dark' || v === 'system' ? v : 'light'
+  } catch { return 'light' }
 }
 
 function resolve(choice: ThemeChoice): 'dark' | 'light' {

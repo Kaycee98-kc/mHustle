@@ -104,12 +104,12 @@ export default function SettingsSheet({ onClose, email }: { onClose: () => void;
         <section>
           <h3>Appearance</h3>
           <div className="type-buttons" role="radiogroup" aria-label="Theme" style={{ width: '100%' }}>
-            {([['dark', 'Dark'], ['light', 'Light'], ['system', 'Match device']] as const).map(([v, l]) => (
+            {([['light', 'Original'], ['dark', 'Dark'], ['system', 'Match device']] as const).map(([v, l]) => (
               <button key={v} type="button" role="radio" aria-checked={theme === v} className={theme === v ? 'active' : ''}
                 onClick={() => { setTheme(v); setThemeChoice(v) }}>{l}</button>
             ))}
           </div>
-          <p className="hint">Saved on this device only.</p>
+          <p className="hint">Original is the default. Match device uses Original in light mode and Dark in dark mode. Saved on this device only.</p>
         </section>
 
         <section>
