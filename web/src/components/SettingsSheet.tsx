@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Bell, BellOff, CalendarPlus, Copy, KeyRound, LogOut, Plus, Trash2, X } from 'lucide-react'
+import { Bell, BellOff, BellRing, CalendarPlus, Copy, KeyRound, LogOut, Plus, Trash2, X } from 'lucide-react'
 import { Field, useToast } from './ui'
 import { useData } from '../lib/store'
 import { friendlyError, supabase } from '../lib/supabase'
@@ -41,6 +41,17 @@ export default function SettingsSheet({ onClose, email }: { onClose: () => void;
     try {
       if (pushOn) { await disablePush(); setPushOn(false); toast('ok', 'Notifications turned off on this device.') }
       else { await enablePush(); setPushOn(true); toast('ok', 'Notifications enabled on this device.') }
+    } catch (e) { toast('error', friendlyError(e)) } finally { setBusy(false) }
+  }
+
+  async function sendTest() {
+    setBusy(true)
+    try {
+      const { data } = await supabase.auth.getSession()
+      const r = await fetch('/api/push-test', { method: 'POST', headers: { Authorization: `Bearer ${data.session?.access_token ?? ''}` } })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(j.error || `Test failed (${r.status})${j.failures?.length ? ': ' + j.failures.join(', ') : ''}`)
+      toast('ok', `Test sent to ${j.sent} device${j.sent === 1 ? '' : 's'} — it should appear within a few seconds.`)
     } catch (e) { toast('error', friendlyError(e)) } finally { setBusy(false) }
   }
 
@@ -115,9 +126,16 @@ export default function SettingsSheet({ onClose, email }: { onClose: () => void;
         <section>
           <h3>Notifications on this device</h3>
           {support.ok ? (
-            <button type="button" className={`btn ${pushOn ? 'btn-ghost' : 'btn-primary'}`} onClick={togglePush} disabled={busy}>
-              {pushOn ? <><BellOff size={16} /> Turn off notifications</> : <><Bell size={16} /> Enable notifications</>}
-            </button>
+            <div className="btn-row">
+              <button type="button" className={`btn ${pushOn ? 'btn-ghost' : 'btn-primary'}`} onClick={togglePush} disabled={busy}>
+                {pushOn ? <><BellOff size={16} /> Turn off notifications</> : <><Bell size={16} /> Enable notifications</>}
+              </button>
+              {pushOn && (
+                <button type="button" className="btn btn-primary" onClick={sendTest} disabled={busy}>
+                  <BellRing size={16} /> Send test notification
+                </button>
+              )}
+            </div>
           ) : <p className="hint">{support.reason}</p>}
         </section>
 

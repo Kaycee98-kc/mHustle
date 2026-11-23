@@ -62,9 +62,9 @@ end $$;
 create or replace function public.mh_rebuild_reminders() returns void
 language plpgsql security definer set search_path = public as $$
 begin
-  update public.clients set updated_at = updated_at;
-  update public.hustle_tasks set updated_at = updated_at;
-  update public.follow_up_tasks set updated_at = updated_at where not completed and not cancelled;
+  update public.clients set updated_at = updated_at where id is not null;
+  update public.hustle_tasks set updated_at = updated_at where id is not null;
+  update public.follow_up_tasks set updated_at = updated_at where id is not null and not completed and not cancelled;
 end $$;
 revoke execute on function public.mh_rebuild_reminders() from public, anon, authenticated;
 
