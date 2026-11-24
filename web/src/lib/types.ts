@@ -102,6 +102,7 @@ export interface Settings {
   quiet_start: string
   quiet_end: string
   sync_token_hash: string | null
+  daily_digest?: boolean
 }
 
 export type Section = 'new' | 'clients' | 'feedback' | 'followup' | 'report' | 'tasks'

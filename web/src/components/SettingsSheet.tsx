@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Bell, BellOff, BellRing, CalendarPlus, Copy, KeyRound, LogOut, Plus, Trash2, X } from 'lucide-react'
+import { Bell, BellOff, BellRing, CalendarCheck, CalendarPlus, Copy, KeyRound, LogOut, Plus, Trash2, X } from 'lucide-react'
 import { Field, useToast } from './ui'
 import { useData } from '../lib/store'
 import { friendlyError, supabase } from '../lib/supabase'
@@ -53,6 +53,24 @@ export default function SettingsSheet({ onClose, email }: { onClose: () => void;
       if (!r.ok) throw new Error(j.error || `Test failed (${r.status})${j.failures?.length ? ': ' + j.failures.join(', ') : ''}`)
       toast('ok', `Test sent to ${j.sent} device${j.sent === 1 ? '' : 's'} — it should appear within a few seconds.`)
     } catch (e) { toast('error', friendlyError(e)) } finally { setBusy(false) }
+  }
+
+  async function sendDigestNow() {
+    setBusy(true)
+    try {
+      const { data } = await supabase.auth.getSession()
+      const r = await fetch('/api/daily-digest', { method: 'POST', headers: { Authorization: `Bearer ${data.session?.access_token ?? ''}` } })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(j.error || `Failed (${r.status})${j.failures?.length ? ': ' + j.failures.join(', ') : ''}`)
+      toast('ok', `Today's summary sent to ${j.sent} device${j.sent === 1 ? '' : 's'}.`)
+    } catch (e) { toast('error', friendlyError(e)) } finally { setBusy(false) }
+  }
+
+  async function toggleDigest(on: boolean) {
+    const { error } = await supabase.from('settings').update({ daily_digest: on }).eq('owner_id', settings?.owner_id ?? '')
+    if (error) { toast('error', /daily_digest/.test(error.message) ? 'Run database update 9 first.' : friendlyError(error)); return }
+    toast('ok', on ? 'Daily summary on — about 8 AM each day when something needs action.' : 'Daily summary off.')
+    await refresh()
   }
 
   async function saveSettings() {
@@ -137,6 +155,15 @@ export default function SettingsSheet({ onClose, email }: { onClose: () => void;
               )}
             </div>
           ) : <p className="hint">{support.reason}</p>}
+          <label className="check">
+            <input type="checkbox" checked={settings?.daily_digest ?? true} onChange={(e) => toggleDigest(e.target.checked)} />
+            <span>Daily summary at about 8 AM — today's appointments, lessons and follow-ups needing action (only sent when there is something)</span>
+          </label>
+          {pushOn && (
+            <button type="button" className="btn btn-ghost" onClick={sendDigestNow} disabled={busy}>
+              <CalendarCheck size={16} /> Send today's summary now
+            </button>
+          )}
         </section>
 
         <section>
