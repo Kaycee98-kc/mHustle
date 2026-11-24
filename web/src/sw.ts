@@ -22,17 +22,29 @@ self.addEventListener('push', (event) => {
   }))
 })
 
+// Where a tapped notification should take the app. iOS sometimes drops
+// postMessage/focus for Home Screen apps, so the target is also left in a
+// small cache entry that the app reads whenever it comes to the front.
+const NAV_CACHE = 'mh-nav'
+const NAV_KEY = '/__mh_pending_nav'
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const url = (event.notification.data?.url as string) ?? '/?section=followup'
+  const rel = (event.notification.data?.url as string) ?? '/?section=followup'
+  const url = new URL(rel, self.location.origin).href
   event.waitUntil((async () => {
+    try {
+      const cache = await caches.open(NAV_CACHE)
+      await cache.put(NAV_KEY, new Response(JSON.stringify({ url, at: Date.now() }), { headers: { 'Content-Type': 'application/json' } }))
+    } catch { /* cache unavailable — fall back to the steps below */ }
+
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-    for (const c of all) {
-      if ('focus' in c) {
-        c.postMessage({ type: 'navigate', url })
-        return (c as WindowClient).focus()
-      }
+    const client = all.find((c) => new URL(c.url).origin === self.location.origin) as WindowClient | undefined
+    if (client) {
+      client.postMessage({ type: 'navigate', url })
+      try { await client.focus() } catch { /* iOS may refuse; the app reads the cache when it becomes visible */ }
+      return
     }
-    return self.clients.openWindow(url)
+    await self.clients.openWindow(url)
   })())
 })

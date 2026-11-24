@@ -66,18 +66,40 @@ function Shell({ email }: { email: string }) {
     window.scrollTo({ top: 0 })
   }, [])
 
-  // Deep links from notifications (cold start and while open)
+  // Deep links from notifications (cold start, background and already open)
   useEffect(() => {
     if (initial.section) window.history.replaceState(null, '', '/')
-    const onMsg = (e: MessageEvent) => {
-      if (e.data?.type !== 'navigate') return
-      const u = new URL(e.data.url, window.location.origin)
+    const apply = (raw: string) => {
+      const u = new URL(raw, window.location.origin)
       const s = u.searchParams.get('section') as Section | null
-      if (s) go(s)
+      if (s && NAV.some((n) => n.id === s)) go(s)
       setHighlightTask(u.searchParams.get('task'))
     }
+    const onMsg = (e: MessageEvent) => { if (e.data?.type === 'navigate') apply(e.data.url) }
+    // read (and clear) a target left by the service worker when a notification was tapped
+    const checkPending = async () => {
+      try {
+        if (!('caches' in window)) return
+        const cache = await caches.open('mh-nav')
+        const r = await cache.match('/__mh_pending_nav')
+        if (!r) return
+        await cache.delete('/__mh_pending_nav')
+        const { url, at } = await r.json()
+        if (Date.now() - at < 10 * 60_000) apply(url)
+      } catch { /* ignore */ }
+    }
+    const onVisible = () => { if (document.visibilityState === 'visible') void checkPending() }
+    void checkPending()
     navigator.serviceWorker?.addEventListener('message', onMsg)
-    return () => navigator.serviceWorker?.removeEventListener('message', onMsg)
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    window.addEventListener('pageshow', onVisible)
+    return () => {
+      navigator.serviceWorker?.removeEventListener('message', onMsg)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+      window.removeEventListener('pageshow', onVisible)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [go])
 
