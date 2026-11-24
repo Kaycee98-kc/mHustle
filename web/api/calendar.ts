@@ -11,7 +11,8 @@ type Client = {
   lesson_date_from: string | null; lesson_date_to: string | null
   lesson_time_from: string | null; lesson_time_to: string | null; updated_at: string
 }
-type HTask = { id: string; remarks: string; date: string; time: string | null; updated_at: string }
+type HTask = { id: string; remarks: string; date: string; time: string | null; updated_at: string
+  kind?: 'goal' | 'task'; date_to?: string | null; time_to?: string | null; partner?: string }
 type FU = { id: string; title: string; task_type: string; priority: string; due_at: string; remind_at: string
   description: string; updated_at: string; contact: string; email: string; partner?: string }
 export type Feed = { clients: Client[]; tasks: HTask[]; followups: FU[] }
@@ -103,15 +104,19 @@ export function buildIcs(feed: Feed, now = new Date()): string {
   }
 
   for (const t of feed.tasks ?? []) {
-    const title = (t.remarks.trim().split('\n')[0] || 'Hustle Task').slice(0, 80)
+    const kind = t.kind === 'goal' ? 'Goal' : 'Task'
+    const title = `${kind}: ${(t.remarks.trim().split('\n')[0] || 'Hustle ' + kind).slice(0, 80)}${withP(t.partner)}`
+    const last = t.date_to && t.date_to >= t.date ? t.date_to : t.date
+    const desc = [t.partner && `Consultant: ${t.partner}`, t.remarks].filter(Boolean).join('\n\n')
     if (t.time) {
       const start = sgt(t.date, t.time)
-      L.push(...event({ uid: `task-${t.id}`, stamp, summary: `Hustle Task: ${title}`, description: t.remarks,
-        start, end: new Date(start.getTime() + 30 * 60_000), alarms: FOUR_ALERTS }))
+      let end = t.time_to ? sgt(last, t.time_to) : (last !== t.date ? sgt(last, t.time) : new Date(start.getTime() + 30 * 60_000))
+      if (end <= start) end = new Date(start.getTime() + 30 * 60_000)
+      L.push(...event({ uid: `task-${t.id}`, stamp, summary: title, description: desc, start, end, alarms: FOUR_ALERTS }))
     } else {
-      // all-day: alerts at 9:00 AM — 7 days, 2 days and 1 day before, and 7:00 AM on the day
-      L.push(...event({ uid: `task-${t.id}`, stamp, summary: `Hustle Task: ${title}`, description: t.remarks,
-        start: t.date, end: addDays(t.date, 1), allDay: true, alarms: ['-P6DT15H', '-P1DT15H', '-PT15H', 'PT7H'] }))
+      // all-day (spanning Date From → Date To): alerts at 9:00 AM — 7 days, 2 days, 1 day before, and 7:00 AM on the day
+      L.push(...event({ uid: `task-${t.id}`, stamp, summary: title, description: desc,
+        start: t.date, end: addDays(last, 1), allDay: true, alarms: ['-P6DT15H', '-P1DT15H', '-PT15H', 'PT7H'] }))
     }
   }
 

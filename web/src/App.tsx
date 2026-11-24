@@ -21,7 +21,7 @@ const NAV: { id: Section; label: string; icon: typeof Users }[] = [
   { id: 'feedback', label: 'Feedback', icon: MessageSquareText },
   { id: 'followup', label: 'Follow Up', icon: ListChecks },
   { id: 'report', label: 'Report', icon: FileText },
-  { id: 'tasks', label: 'Hustle Tasks', icon: Briefcase },
+  { id: 'tasks', label: 'Hustle Goals & Tasks', icon: Briefcase },
 ]
 
 export default function App() {

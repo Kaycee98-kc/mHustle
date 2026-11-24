@@ -73,6 +73,11 @@ export interface HustleTask {
   remarks: string
   date: string | null
   time: string | null
+  kind?: 'goal' | 'task'
+  date_to?: string | null
+  time_to?: string | null
+  partner?: string
+  created_by_email?: string
   completed?: boolean
   completed_at?: string | null
   created_at: string

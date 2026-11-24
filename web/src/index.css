@@ -489,3 +489,14 @@ h3 .muted { text-transform: none; letter-spacing: 0; font-family: var(--font-bod
 .today-stat .n { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; color: var(--text); line-height: 1.1; }
 .today-stat.bad .n { color: var(--urgent); }
 div.today-stat { cursor: default; }
+
+/* Hustle Goals & Tasks */
+.type-buttons.cols-2 { grid-template-columns: 1fr 1fr; }
+.list-controls.cols-3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 480px) { .list-controls.cols-3 { grid-template-columns: 1fr 1fr; } .list-controls.cols-3 .control:last-child { grid-column: 1 / -1; } }
+.ht-head { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ht-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .84rem; }
+.badge-goal { background: var(--ok-soft); color: var(--ok); }
+.badge-task { background: var(--info-soft); color: var(--info); }
+/* longer nav label wraps neatly on phones */
+@media (max-width: 899px) { .nav-label { white-space: normal; max-width: 100%; } }
