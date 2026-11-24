@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, Trash2 } from 'lucide-react'
 import { Empty, Segmented, useToast } from '../components/ui'
 import PartnerPicker from '../components/PartnerPicker'
+import TodaySummary from '../components/TodaySummary'
 import { bucket, useData } from '../lib/store'
 import { friendlyError, supabase } from '../lib/supabase'
 import { sgtDateTime, waLink } from '../lib/format'
@@ -11,7 +12,7 @@ type Tab = 'todo' | 'miss' | 'done'
 const PRIORITY_LABEL = { urgent: 'Urgent', high: 'High', normal: 'Normal' } as const
 const PRIORITY_RANK = { urgent: 0, high: 1, normal: 2 } as const
 
-export default function FollowUp({ highlightTaskId }: { highlightTaskId: string | null }) {
+export default function FollowUp({ highlightTaskId, onOpenClient }: { highlightTaskId: string | null; onOpenClient: (id: string) => void }) {
   const { tasks, clients, feedback, now, refresh } = useData()
   const toast = useToast()
   const [tab, setTab] = useState<Tab>('todo')
@@ -66,7 +67,7 @@ export default function FollowUp({ highlightTaskId }: { highlightTaskId: string 
     try {
       const { error } = await supabase.from('clients').update({ partner: value }).eq('id', clientId)
       if (error) throw error
-      toast('ok', value ? `Partner set: ${value}` : 'Partner cleared.')
+      toast('ok', value ? `Consultant set: ${value}` : 'Consultant cleared.')
       await refresh()
     } catch (e) { toast('error', friendlyError(e)) }
   }
@@ -74,6 +75,7 @@ export default function FollowUp({ highlightTaskId }: { highlightTaskId: string 
   const list = groups[tab]
   return (
     <div className="stack">
+      <TodaySummary onOpenClient={onOpenClient} onShowTab={setTab} />
       <Segmented<Tab> label="Follow-up category" value={tab} onChange={setTab} options={[
         { value: 'todo', label: 'To Follow Up', count: groups.todo.length },
         { value: 'miss', label: 'Miss', count: groups.miss.length },
@@ -104,7 +106,7 @@ export default function FollowUp({ highlightTaskId }: { highlightTaskId: string 
               <div className="task-action">{TASK_ACTION[t.task_type]}</div>
               {c && tab !== 'done' && (
                 <div className={`task-partner${c.partner.trim() ? '' : ' needs'}`}>
-                  {c.partner.trim() ? <span>With: <strong>{c.partner}</strong></span> : <span>No partner yet — who should follow up with you?</span>}
+                  {c.partner.trim() ? <span>With: <strong>{c.partner}</strong></span> : <span>No consultant yet — who should follow up with you?</span>}
                   <PartnerPicker compact value={c.partner} onChange={(v) => setPartner(c.id, v)} />
                 </div>
               )}

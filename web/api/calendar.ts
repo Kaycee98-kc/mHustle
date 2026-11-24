@@ -121,7 +121,7 @@ export function buildIcs(feed: Feed, now = new Date()): string {
     const end = isMonday ? new Date(start.getTime() + 30 * 60_000) : new Date(f.due_at)
     L.push(...event({ uid: `fu-${f.id}`, stamp,
       summary: `${f.priority === 'urgent' ? '⚠️ ' : ''}Follow Up: ${f.title}${withP(f.partner)}`,
-      description: [f.partner ? `With: ${f.partner}` : 'No partner assigned yet', f.contact && `Contact: ${f.contact}`, f.email && `Email: ${f.email}`, f.description].filter(Boolean).join('\n'),
+      description: [f.partner ? `With: ${f.partner}` : 'No consultant assigned yet', f.contact && `Contact: ${f.contact}`, f.email && `Email: ${f.email}`, f.description].filter(Boolean).join('\n'),
       start, end, alarms: ['PT0S'] }))
   }
 

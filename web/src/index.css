@@ -467,3 +467,25 @@ h3 .muted { text-transform: none; letter-spacing: 0; font-family: var(--font-bod
   font-family: var(--font-body); font-size: .66rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
   padding: 2px 7px; border-radius: 999px; background: var(--ok-soft); color: var(--ok);
 }
+
+/* Today summary (top of Follow Up) */
+.today { display: flex; flex-direction: column; gap: 14px; border-color: var(--accent); }
+.today-head { display: flex; justify-content: space-between; align-items: flex-end; }
+.today-label { font-family: var(--font-display); font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); }
+.today-date { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; line-height: 1.2; }
+.today-block { display: flex; flex-direction: column; gap: 8px; }
+.today-title { display: flex; align-items: center; gap: 6px; font-size: .88rem; font-weight: 650; color: var(--text-2); }
+.today-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.today-item { width: 100%; display: flex; gap: 12px; align-items: flex-start; text-align: left; cursor: pointer;
+  padding: 9px 11px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface-2); }
+.today-item:hover { border-color: var(--line-strong); }
+.today-time { flex: none; min-width: 66px; font-weight: 700; color: var(--accent); }
+.today-who { display: flex; flex-direction: column; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+.today-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: .82rem; }
+.today-warn { color: var(--warn); font-weight: 600; }
+.today-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.today-stat { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 9px 11px; border-radius: var(--radius-sm);
+  border: 1px solid var(--line); background: var(--surface-2); font-size: .8rem; color: var(--muted); text-align: left; cursor: pointer; }
+.today-stat .n { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; color: var(--text); line-height: 1.1; }
+.today-stat.bad .n { color: var(--urgent); }
+div.today-stat { cursor: default; }

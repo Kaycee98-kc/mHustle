@@ -229,7 +229,7 @@ function ClientCard({ c, isNew, open, checked, onCheck, feedbackCount, onToggle,
             </dd></div>}
             {c.email && <div className="detail"><dt>Email</dt><dd><a href={`mailto:${c.email}`}>{c.email}</a></dd></div>}
             {row('Course', c.course)}
-            {row('Partner', c.partner)}
+            {row('Consultant', c.partner)}
             {row('Remarks', c.remarks, true)}
             {row('Schedule Type', SCHEDULE_LABEL[c.schedule_type])}
             {c.schedule_type !== 'potential' && row(c.schedule_type === 'lesson' ? 'Lesson schedule' : 'Appointment', scheduleLine(c))}
@@ -238,7 +238,7 @@ function ClientCard({ c, isNew, open, checked, onCheck, feedbackCount, onToggle,
           </dl>
 
           {c.schedule_type !== 'potential' && !c.partner.trim() && (
-            <p className="nudge">No partner or consultant yet for this {c.schedule_type}. Use Edit Client to add one.</p>
+            <p className="nudge">No consultant yet for this {c.schedule_type}. Use Edit Client to add one.</p>
           )}
           {c.schedule_type === 'potential' && (
             <div className="action-done">

@@ -197,7 +197,7 @@ export function generateReport(input: ReportInput): string {
     out.push("");
     p(`${label(c)} — ${longDate(c.appointment_date!)}, ${time12(c.appointment_time)}`);
     if (c.course) b(`Course: ${c.course}`);
-    if (c.partner) b(`Partner: ${c.partner}`);
+    if (c.partner) b(`Consultant: ${c.partner}`);
     b(`Status: ${s === "upcoming" ? "Scheduled; upcoming at the time of this report." :
       s === "feedback" ? "Feedback was recorded after the scheduled time (see Client Feedback)." :
       "Scheduled. No feedback has been recorded, so it is not confirmed whether the meeting took place."}`);

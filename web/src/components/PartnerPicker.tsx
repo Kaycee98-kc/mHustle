@@ -40,10 +40,8 @@ export default function PartnerPicker({ id, value, onChange, onManage, compact }
     return () => { document.removeEventListener('mousedown', close); document.removeEventListener('touchstart', close); document.removeEventListener('keydown', esc) }
   }, [open])
 
-  const groups = useMemo(() => ([
-    ['Partners', partners.filter((p) => p.role === 'Partner')],
-    ['Consultants', partners.filter((p) => p.role === 'Consultant')],
-  ] as const), [partners])
+  // one list of consultants (older entries saved with a different role are included)
+  const groups = useMemo(() => ([['Consultants', partners]] as const), [partners])
 
   const toggle = (name: string) =>
     change(joinNames(selected.includes(name) ? selected.filter((n) => n !== name) : [...selected, name]))
@@ -52,12 +50,12 @@ export default function PartnerPicker({ id, value, onChange, onManage, compact }
     <div className={`picker${compact ? ' picker-compact' : ''}`} ref={ref}>
       <button id={id} type="button" className="picker-btn" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen(!open)}>
         <Users size={16} aria-hidden />
-        <span className={selected.length ? '' : 'muted'}>{compact ? (selected.length ? 'Change' : 'Assign') : selected.length ? selected.join(', ') : 'Select partner / consultant'}</span>
+        <span className={selected.length ? '' : 'muted'}>{compact ? (selected.length ? 'Change' : 'Assign') : selected.length ? selected.join(', ') : 'Select consultant'}</span>
         <ChevronDown size={16} aria-hidden />
       </button>
       {open && (
         <div className="picker-panel" role="listbox" aria-multiselectable="true">
-          {!partners.length && <p className="hint">No partners saved yet.</p>}
+          {!partners.length && <p className="hint">No consultants saved yet.</p>}
           {groups.map(([label, list]) => list.length ? (
             <div key={label} className="picker-group">
               <div className="picker-group-label">{label}</div>

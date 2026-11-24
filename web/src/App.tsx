@@ -142,7 +142,7 @@ function Shell({ email }: { email: string }) {
         <div hidden={section !== 'feedback'}>
           <Feedback preselectClientId={feedbackFor} onPreselectUsed={clearFeedbackFor} />
         </div>
-        <div hidden={section !== 'followup'}><FollowUp highlightTaskId={highlightTask} /></div>
+        <div hidden={section !== 'followup'}><FollowUp highlightTaskId={highlightTask} onOpenClient={(id) => { setExpandedId(id); go('clients') }} /></div>
         <div hidden={section !== 'report'}><Report /></div>
         <div hidden={section !== 'tasks'}><HustleTasks /></div>
       </main>

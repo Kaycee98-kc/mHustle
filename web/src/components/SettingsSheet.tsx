@@ -9,7 +9,7 @@ import { getThemeChoice, setThemeChoice, type ThemeChoice } from '../lib/theme'
 
 export default function SettingsSheet({ onClose, email }: { onClose: () => void; email: string }) {
   const { settings, refresh, partners } = useData()
-  const [np, setNp] = useState({ name: '', role: 'Partner' as 'Partner' | 'Consultant', phone: '', email: '' })
+  const [np, setNp] = useState({ name: '', phone: '', email: '' })
   const toast = useToast()
   const [pushOn, setPushOn] = useState(false)
   const [theme, setTheme] = useState<ThemeChoice>(getThemeChoice())
@@ -86,9 +86,9 @@ export default function SettingsSheet({ onClose, email }: { onClose: () => void;
   async function addPartner() {
     const name = np.name.trim().replace(/,/g, ' ')
     if (!name) { toast('error', 'Please enter a name.'); return }
-    const { error } = await supabase.from('partners').insert({ name, role: np.role, phone: np.phone.trim(), email: np.email.trim() })
+    const { error } = await supabase.from('partners').insert({ name, role: 'Consultant', phone: np.phone.trim(), email: np.email.trim() })
     if (error) { toast('error', error.code === '23505' ? `${name} is already in your list.` : /relation .*partners/i.test(error.message) ? 'Run database update 0004 first.' : friendlyError(error)); return }
-    setNp({ name: '', role: np.role, phone: '', email: '' })
+    setNp({ name: '', phone: '', email: '' })
     toast('ok', `${name} added.`)
     await refresh()
   }
@@ -189,27 +189,20 @@ export default function SettingsSheet({ onClose, email }: { onClose: () => void;
         </section>
 
         <section>
-          <h3>Partners &amp; Consultants</h3>
-          <p className="hint">Colleagues you can tick in the Partner field. mHustle reminds you when an appointment, lesson or follow-up has no one assigned.</p>
+          <h3>Consultants</h3>
+          <p className="hint">Colleagues you can tick in the Consultant field. mHustle reminds you when an appointment, lesson or follow-up has no consultant assigned.</p>
           {partners.length > 0 && (
             <ul className="partner-list">
               {partners.map((p) => (
                 <li key={p.id}>
-                  <span><strong>{p.name}</strong> <span className={`badge ${p.role === 'Partner' ? 'badge-appointment' : 'badge-lesson'}`}>{p.role}</span>
+                  <span><strong>{p.name}</strong>
                     {(p.phone || p.email) && <span className="muted small"> · {[p.phone, p.email].filter(Boolean).join(' · ')}</span>}</span>
                   <button type="button" className="icon-btn icon-btn-sm" aria-label={`Remove ${p.name}`} onClick={() => removePartner(p.id, p.name)}><Trash2 size={16} /></button>
                 </li>
               ))}
             </ul>
           )}
-          <div className="pair">
-            <Field label="Name" htmlFor="pt-name"><input id="pt-name" type="text" value={np.name} onChange={(e) => setNp({ ...np, name: e.target.value })} /></Field>
-            <Field label="Role" htmlFor="pt-role">
-              <select id="pt-role" value={np.role} onChange={(e) => setNp({ ...np, role: e.target.value as 'Partner' | 'Consultant' })}>
-                <option>Partner</option><option>Consultant</option>
-              </select>
-            </Field>
-          </div>
+          <Field label="Name" htmlFor="pt-name"><input id="pt-name" type="text" value={np.name} onChange={(e) => setNp({ ...np, name: e.target.value })} /></Field>
           <div className="pair">
             <Field label="Phone (optional)" htmlFor="pt-phone"><input id="pt-phone" type="tel" value={np.phone} onChange={(e) => setNp({ ...np, phone: e.target.value })} /></Field>
             <Field label="Email (optional)" htmlFor="pt-email"><input id="pt-email" type="email" value={np.email} onChange={(e) => setNp({ ...np, email: e.target.value })} /></Field>
@@ -244,7 +237,7 @@ export default function SettingsSheet({ onClose, email }: { onClose: () => void;
         <section>
           <h3>Account &amp; sharing</h3>
           <p className="hint">Signed in as {email}</p>
-          <p className="hint">mHustle is shared: everyone with a login sees and edits the same clients, feedback, follow-ups, Hustle Tasks, partners and reports. Notifications and the calendar/sync link are personal to each person. To give a colleague access, create their login in Supabase → Authentication → Users → Add user.</p>
+          <p className="hint">mHustle is shared: everyone with a login sees and edits the same clients, feedback, follow-ups, Hustle Tasks, consultants and reports. Notifications and the calendar/sync link are personal to each person. To give a colleague access, create their login in Supabase → Authentication → Users → Add user.</p>
           <button type="button" className="btn btn-ghost" onClick={() => supabase.auth.signOut()}><LogOut size={16} /> Sign out</button>
         </section>
       </div>

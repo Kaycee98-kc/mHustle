@@ -108,7 +108,7 @@ export default function NewClient({ editingId, onEditDone }: { editingId: string
     setErrors(e)
     if (Object.keys(e).length) { toast('error', 'Please correct the highlighted fields.'); return }
     if (f.schedule_type !== 'potential' && !f.partner.trim() &&
-        !window.confirm(`No partner or consultant is selected for this ${f.schedule_type}.\n\nSave without a partner? (Choose Cancel to pick one.)`)) {
+        !window.confirm(`No consultant is selected for this ${f.schedule_type}.\n\nSave without a consultant? (Choose Cancel to pick one.)`)) {
       document.getElementById('nc-partner')?.focus()
       return
     }
@@ -153,7 +153,7 @@ export default function NewClient({ editingId, onEditDone }: { editingId: string
       {text('contact', 'Contact', { type: 'tel', inputMode: 'tel', placeholder: '+65 9123 4567', autoComplete: 'tel' })}
       {text('email', 'Email', { type: 'email', inputMode: 'email', autoComplete: 'email' })}
       {text('course', 'Course')}
-      <Field label="Partner" htmlFor="nc-partner">
+      <Field label="Consultant" htmlFor="nc-partner">
         <PartnerPicker id="nc-partner" value={f.partner} onChange={(v) => set('partner', v)} />
       </Field>
       <Field label="Remarks" htmlFor="nc-remarks">
@@ -226,7 +226,7 @@ export default function NewClient({ editingId, onEditDone }: { editingId: string
         )}
 
         {f.schedule_type !== 'potential' && !f.partner.trim() && (
-          <p className="nudge">Who's joining this {f.schedule_type}? Select a partner or consultant above.</p>
+          <p className="nudge">Who's joining this {f.schedule_type}? Select a consultant above.</p>
         )}
         <p className="hint">
           Apple Reminders list: <strong>{f.schedule_type === 'potential' ? 'Follow Up' : 'Clients'}</strong>

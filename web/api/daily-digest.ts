@@ -52,7 +52,7 @@ export function buildDigest(today: string, clients: Client[], followups: FU[], n
   }
   let body = parts.join(' ')
   if (body.length > 230) body = body.slice(0, 227).trimEnd() + '…'
-  const url = todays.length && !action.length ? '/?section=clients' : '/?section=followup'
+  const url = '/?section=followup'
   return { title: 'mHustle · Today', body, url }
 }
 
